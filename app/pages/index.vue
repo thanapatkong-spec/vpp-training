@@ -3,7 +3,14 @@ import {
   Award, CalendarDays, ChevronDown, Clock, FileText, GraduationCap, Hospital,
   Laptop, Scale, ShieldCheck, Stethoscope, Users, AlertCircle, BookOpen,
 } from "lucide-vue-next";
-import { COHORT, PACKAGES, baht } from "#shared/config";
+import { CONTACT, COHORT, PACKAGES, baht } from "#shared/config";
+
+const lineUrl = `https://line.me/R/ti/p/${encodeURIComponent(CONTACT.line)}`;
+const mailUrl = `mailto:${CONTACT.email}?subject=${encodeURIComponent("สมัครเรียนหลักสูตรผู้ช่วยสัตวแพทย์ (VPP)")}&body=${encodeURIComponent("ชื่อ-นามสกุล:\nเบอร์โทร:\nแพ็กเกจที่สนใจ (ภาคทฤษฎี / ภาคปฏิบัติ / ครบ 2 ภาค):\nโรงพยาบาล/คลินิกที่สังกัด:")}`;
+
+const { data: latest } = await useAsyncData("latest-articles", () =>
+  queryCollection("articles").where("draft", "<>", true).order("date", "DESC").limit(3).all(),
+);
 
 const sessionIcons = [Laptop, FileText, Hospital];
 
@@ -26,7 +33,7 @@ const WHY = [
 const FAQ = [
   { q: "หลักสูตรเรียนในรูปแบบใด?", a: "ภาคทฤษฎีเรียนสดออนไลน์ ตามด้วยสอบออนไลน์ และภาคปฏิบัติพร้อมสอบปฏิบัติ ณ รพส.คชาเวท ลาซาล" },
   { q: "ค่าอบรมเท่าไร และเลือกเรียนแยกภาคได้หรือไม่?", a: "ภาคทฤษฎี 7,000 บาท ภาคปฏิบัติ 10,000 บาท หรือสมัครครบ 2 ภาค 15,000 บาท (ประหยัด 2,000 บาท) เลือกสมัครแยกภาคได้" },
-  { q: "สมัครเรียนและชำระเงินอย่างไร?", a: "กรอกใบสมัครในหน้า “สมัครเรียนและชำระเงิน” โอนเงินตามบัญชีที่แสดง แล้วแนบสลิปในใบสมัคร ทีมงานจะติดต่อกลับภายใน 1–2 วันทำการ" },
+  { q: "สมัครเรียนและชำระเงินอย่างไร?", a: "ส่งชื่อ เบอร์โทร และแพ็กเกจที่สนใจมาทาง LINE หรืออีเมล ทีมงานจะแจ้งขั้นตอนการชำระเงินกลับไป" },
   { q: "หลักสูตรเหมาะกับใคร?", a: "พนักงานใหม่ของโรงพยาบาลสัตว์ ผู้ช่วยแพทย์ที่ต้องการเพิ่มทักษะ และโรงพยาบาลสัตว์/คลินิกที่ต้องการพัฒนาทีม" },
   { q: "ผ่านการอบรมแล้วสามารถทำงานแทนสัตวแพทย์ได้หรือไม่?", a: "ไม่ได้ การอบรมไม่ได้ทำให้ผู้ช่วยสัตวแพทย์เป็นสัตวแพทย์ หรือทำหัตถการในขอบเขตวิชาชีพสัตวแพทย์ได้" },
 ];
@@ -51,7 +58,7 @@ const FAQ = [
             สร้างทีมที่มีพื้นฐาน ลดภาระการสอนงาน ยกระดับมาตรฐานโรงพยาบาลสัตว์ พร้อมเป็นส่วนหนึ่งของทีมอย่างมั่นใจ
           </p>
           <div class="mt-7 flex flex-wrap gap-3">
-            <NuxtLink to="/register" class="btn-brand px-6 py-3">สมัครเรียนและชำระเงิน</NuxtLink>
+            <a href="#contact" class="btn-brand px-6 py-3">สมัครเรียน / สอบถาม</a>
             <a href="#cohorts" class="rounded-full border-2 border-navy-800 px-6 py-3 font-semibold text-navy-800 hover:bg-navy-800 hover:text-white">ดูตารางเรียน</a>
           </div>
         </div>
@@ -75,14 +82,14 @@ const FAQ = [
     <section id="cohorts" class="bg-gradient-to-br from-navy-900 to-navy-700 py-14 text-white">
       <div class="mx-auto max-w-6xl px-5">
         <h2 class="text-3xl font-bold">รุ่นที่เปิดรับสมัคร</h2>
-        <p class="mt-1 text-sky-card">เลือกรุ่นที่สะดวก แล้วสมัครพร้อมแนบสลิปโอนเงินได้ทันที</p>
+        <p class="mt-1 text-sky-card">เลือกรุ่นที่สะดวก แล้วสมัครผ่าน LINE หรืออีเมลได้ทันที</p>
         <div class="mt-6 rounded-3xl bg-white p-6 text-navy-900 shadow-xl">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-3">
               <span class="rounded-full bg-brand px-5 py-2 text-lg font-bold text-white">{{ COHORT.name }}</span>
               <span class="rounded-full bg-ok/10 px-3 py-1 text-xs font-medium text-ok">● เปิดรับสมัคร · {{ COHORT.seatsLeft }} ที่นั่ง</span>
             </div>
-            <NuxtLink to="/register" class="rounded-full bg-navy-800 px-5 py-2 text-sm font-semibold text-white">สมัครรุ่นนี้ →</NuxtLink>
+            <a href="#contact" class="rounded-full bg-navy-800 px-5 py-2 text-sm font-semibold text-white">สมัครรุ่นนี้ →</a>
           </div>
           <div class="mt-5 grid gap-4 md:grid-cols-3">
             <div v-for="(s, i) in COHORT.sessions" :key="s.title" class="rounded-2xl bg-sky-card/60 p-4 text-sm">
@@ -108,7 +115,7 @@ const FAQ = [
               <div class="font-semibold">★ พิเศษ! สมัครครบทั้ง 2 ภาค</div>
               <div class="mt-1 text-xs opacity-90">จาก 17,000 บาท · ประหยัด 2,000 บาท</div>
               <div class="mt-4 text-5xl font-bold">{{ baht(p.price) }} <span class="text-lg font-medium">บาท/คน</span></div>
-              <NuxtLink to="/register?package=bundle" class="mt-5 inline-block rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-dark">สมัครแพ็กเกจนี้</NuxtLink>
+              <a href="#contact" class="mt-5 inline-block rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-dark">สมัครแพ็กเกจนี้</a>
             </div>
             <div v-else class="rounded-3xl bg-white p-6 shadow-md">
               <component :is="p.id === 'theory' ? Laptop : Hospital" class="size-7 text-navy-800" />
@@ -171,9 +178,18 @@ const FAQ = [
       <div class="mx-auto max-w-6xl px-5">
         <div class="flex items-center justify-between">
           <h2 class="flex items-center gap-2 text-2xl font-bold text-navy-800"><BookOpen class="text-brand" />บทความ</h2>
-          <span class="text-sm text-navy-800">ดูทั้งหมด →</span>
+          <NuxtLink to="/articles" class="text-sm text-navy-800">ดูทั้งหมด →</NuxtLink>
         </div>
-        <p class="mt-4 text-sm text-slate-500">ยังไม่มีบทความที่เผยแพร่</p>
+        <ul v-if="latest?.length" class="mt-4 grid gap-4 md:grid-cols-3">
+          <li v-for="a in latest" :key="a.path">
+            <NuxtLink :to="a.path" class="block h-full rounded-2xl bg-white p-5 shadow-sm hover:shadow-md">
+              <span v-if="a.cohort" class="rounded-full bg-brand px-2.5 py-0.5 text-xs font-semibold text-white">{{ a.cohort }}</span>
+              <div class="mt-2 font-bold text-navy-800">{{ a.title }}</div>
+              <p v-if="a.description" class="mt-1 text-sm text-slate-600">{{ a.description }}</p>
+            </NuxtLink>
+          </li>
+        </ul>
+        <p v-else class="mt-4 text-sm text-slate-500">ยังไม่มีบทความที่เผยแพร่</p>
       </div>
     </section>
 
@@ -195,6 +211,21 @@ const FAQ = [
           <h2 class="flex items-center gap-2 text-2xl font-bold text-navy-800"><FileText class="text-brand" />เอกสารแนบ</h2>
           <p class="mt-4 text-sm text-slate-500">ยังไม่มีเอกสารที่เผยแพร่</p>
         </div>
+      </div>
+    </section>
+    <!-- Contact -->
+    <section id="contact" class="bg-gradient-to-br from-navy-900 to-navy-700 py-14 text-white">
+      <div class="mx-auto max-w-3xl px-5 text-center">
+        <h2 class="text-3xl font-bold">สมัครเรียน / สอบถาม</h2>
+        <p class="mt-3 text-sky-card">
+          ส่งชื่อ-นามสกุล เบอร์โทร แพ็กเกจที่สนใจ และโรงพยาบาล/คลินิกที่สังกัด
+          ทาง LINE หรืออีเมล ทีมงานจะแจ้งขั้นตอนการชำระเงินกลับไป
+        </p>
+        <div class="mt-7 flex flex-wrap justify-center gap-3">
+          <a :href="lineUrl" target="_blank" rel="noopener" class="btn-brand px-7 py-3">LINE {{ CONTACT.line }}</a>
+          <a :href="mailUrl" class="rounded-full bg-white px-7 py-3 font-semibold text-navy-800">อีเมล {{ CONTACT.email }}</a>
+        </div>
+        <p class="mt-4 text-sm text-sky-card">โทร {{ CONTACT.phone }}</p>
       </div>
     </section>
   </main>

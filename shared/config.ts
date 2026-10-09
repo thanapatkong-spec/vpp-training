@@ -25,8 +25,6 @@ export const COHORT = {
   ],
 };
 
-export const BANK = { name: "ธนาคารกสิกรไทย", number: "123-4-56789-0", holder: "บริษัท วีพีพี เทรนนิ่ง จำกัด" };
-
 export const CONTACT = { line: "@dr.john", email: "info@vetvpp.com", phone: "094-825-2545" };
 
 export const baht = (n: number) => n.toLocaleString("th-TH");

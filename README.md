@@ -15,12 +15,11 @@ npm run dev
 ```
 
 ## โครงสร้าง
-- `app/pages/index.vue` หน้าแรก · `app/pages/register.vue` ฟอร์มสมัครพร้อมแนบสลิป
-- `server/api/register.post.ts` รับใบสมัคร (validate ด้วย Zod, คิดราคาฝั่งเซิร์ฟเวอร์)
+- `app/pages/index.vue` หน้าข้อมูลหลักสูตร (ปุ่มสมัครเรียนส่งไป LINE@ / อีเมล)
+- `content/articles/*.md` บทความ/เนื้อหาอบรมแต่ละรุ่น (Nuxt Content — frontmatter: title, description, date, cohort, draft) · รูปไว้ใน `public/articles/`
 - `shared/config.ts` รุ่น/แพ็กเกจ/บัญชี/ช่องทางติดต่อ (ข้อมูลตัวอย่าง — แก้ให้ตรงของจริง)
 - `server/db/schema.ts` ตาราง `registrations` + `courses`/`lessons` (เฟส e-learning)
-- `server/utils/storage.ts` เก็บสลิป (dev = `.uploads/`, production ให้สลับเป็น S3/R2)
 
 ## ยังไม่ได้ทำ
-รูป hero จริง · หน้าแอดมินตรวจสลิป · บทความ/เอกสาร · Auth + e-learning · อีเมลแจ้งเตือน
+หน้าสมัคร+แนบสลิป (ถอดออกไปก่อน เอากลับมาได้จาก git history) · รูป hero จริง · หน้าแอดมินตรวจสลิป · บทความ/เอกสาร · Auth + e-learning · อีเมลแจ้งเตือน
 (คำตอบ FAQ เป็นร่าง ควรตรวจแก้)
