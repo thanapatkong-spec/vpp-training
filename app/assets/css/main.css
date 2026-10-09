@@ -17,6 +17,8 @@
   --color-ok: #15803d;
 }
 
+html { scroll-behavior: smooth; }
+
 body {
   background: #f4fafd;
   color: #0f2742;
@@ -24,6 +26,8 @@ body {
 }
 
 .btn-brand {
+  display: inline-block;
+  text-align: center;
   background-image: linear-gradient(90deg, var(--color-brand), var(--color-brand-dark));
   color: #fff;
   border-radius: 9999px;

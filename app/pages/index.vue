@@ -1,0 +1,202 @@
+<script setup lang="ts">
+import {
+  Award, CalendarDays, ChevronDown, Clock, FileText, GraduationCap, Hospital,
+  Laptop, Scale, ShieldCheck, Stethoscope, Users, AlertCircle, BookOpen,
+} from "lucide-vue-next";
+import { COHORT, PACKAGES, baht } from "#shared/config";
+
+const sessionIcons = [Laptop, FileText, Hospital];
+
+const PROBLEMS = [
+  "พนักงานใหม่ยังทำงานไม่คล่อง",
+  "จับบังคับสัตว์ไม่ถูกวิธี",
+  "ไม่มั่นใจในการใช้อุปกรณ์และเครื่องมือ",
+  "พื้นฐานของแต่ละคนไม่เท่ากัน",
+  "คุณหมอต้องเสียเวลาสอนงานตั้งแต่พื้นฐาน",
+];
+
+const WHY = [
+  { icon: FileText, t: "มีหลักฐานการอบรม", d: "เอกสารยืนยันบุคลากรผ่านการอบรมและประเมินผล เหมาะกับ Training Record / HR" },
+  { icon: Users, t: "สร้างมาตรฐานทีม", d: "ทุกคนมีพื้นฐานเดียวกัน ลดความเหลื่อมล้ำของประสบการณ์" },
+  { icon: Stethoscope, t: "ลดภาระคุณหมอ", d: "ให้ VPP ปูพื้นฐานก่อน แล้วนำไปฝึกต่อกับทีมของคลินิก" },
+  { icon: ShieldCheck, t: "บริหารบุคลากรเป็นระบบ", d: "มีประวัติการอบรม ผลการประเมิน และแผนพัฒนาทักษะต่อเนื่อง" },
+];
+
+// คำตอบเป็นร่างจากข้อมูลในหน้าเว็บ — ตรวจแก้ข้อความจริงก่อนเปิดใช้
+const FAQ = [
+  { q: "หลักสูตรเรียนในรูปแบบใด?", a: "ภาคทฤษฎีเรียนสดออนไลน์ ตามด้วยสอบออนไลน์ และภาคปฏิบัติพร้อมสอบปฏิบัติ ณ รพส.คชาเวท ลาซาล" },
+  { q: "ค่าอบรมเท่าไร และเลือกเรียนแยกภาคได้หรือไม่?", a: "ภาคทฤษฎี 7,000 บาท ภาคปฏิบัติ 10,000 บาท หรือสมัครครบ 2 ภาค 15,000 บาท (ประหยัด 2,000 บาท) เลือกสมัครแยกภาคได้" },
+  { q: "สมัครเรียนและชำระเงินอย่างไร?", a: "กรอกใบสมัครในหน้า “สมัครเรียนและชำระเงิน” โอนเงินตามบัญชีที่แสดง แล้วแนบสลิปในใบสมัคร ทีมงานจะติดต่อกลับภายใน 1–2 วันทำการ" },
+  { q: "หลักสูตรเหมาะกับใคร?", a: "พนักงานใหม่ของโรงพยาบาลสัตว์ ผู้ช่วยแพทย์ที่ต้องการเพิ่มทักษะ และโรงพยาบาลสัตว์/คลินิกที่ต้องการพัฒนาทีม" },
+  { q: "ผ่านการอบรมแล้วสามารถทำงานแทนสัตวแพทย์ได้หรือไม่?", a: "ไม่ได้ การอบรมไม่ได้ทำให้ผู้ช่วยสัตวแพทย์เป็นสัตวแพทย์ หรือทำหัตถการในขอบเขตวิชาชีพสัตวแพทย์ได้" },
+];
+</script>
+
+<template>
+  <SiteHeader />
+  <main>
+    <!-- Hero -->
+    <section class="bg-gradient-to-b from-white to-sky-soft">
+      <div class="mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 md:grid-cols-2 md:py-20">
+        <div>
+          <div class="flex flex-wrap gap-2 text-sm font-semibold text-white">
+            <span class="rounded-full bg-ok px-3 py-1">เปิดรับสมัครแล้ว!</span>
+            <span class="rounded-full bg-brand px-3 py-1">รุ่นที่เปิดรับบัตร</span>
+          </div>
+          <h1 class="mt-5 text-4xl font-bold leading-tight text-navy-800 md:text-5xl">
+            หลักสูตรผู้ช่วยสัตวแพทย์
+            <span class="block text-brand">ด้านการพยาบาลสัตว์</span>
+          </h1>
+          <p class="mt-4 max-w-md text-slate-600">
+            สร้างทีมที่มีพื้นฐาน ลดภาระการสอนงาน ยกระดับมาตรฐานโรงพยาบาลสัตว์ พร้อมเป็นส่วนหนึ่งของทีมอย่างมั่นใจ
+          </p>
+          <div class="mt-7 flex flex-wrap gap-3">
+            <NuxtLink to="/register" class="btn-brand px-6 py-3">สมัครเรียนและชำระเงิน</NuxtLink>
+            <a href="#cohorts" class="rounded-full border-2 border-navy-800 px-6 py-3 font-semibold text-navy-800 hover:bg-navy-800 hover:text-white">ดูตารางเรียน</a>
+          </div>
+        </div>
+        <div class="relative">
+          <!-- TODO: แทนด้วยรูปจริง public/hero.jpg -->
+          <div class="flex aspect-[4/3] items-center justify-center rounded-3xl bg-gradient-to-br from-sky-card to-white shadow-xl">
+            <Stethoscope class="size-24 text-navy-700/40" />
+          </div>
+          <div class="absolute -bottom-5 left-5 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-lg">
+            <Award class="size-7 text-brand" />
+            <div class="text-sm">
+              <div class="font-semibold text-navy-800">ใบประกาศนียบัตร</div>
+              <div class="text-xs text-slate-500">รับรองจากสัตวแพทยสภา</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Cohorts -->
+    <section id="cohorts" class="bg-gradient-to-br from-navy-900 to-navy-700 py-14 text-white">
+      <div class="mx-auto max-w-6xl px-5">
+        <h2 class="text-3xl font-bold">รุ่นที่เปิดรับสมัคร</h2>
+        <p class="mt-1 text-sky-card">เลือกรุ่นที่สะดวก แล้วสมัครพร้อมแนบสลิปโอนเงินได้ทันที</p>
+        <div class="mt-6 rounded-3xl bg-white p-6 text-navy-900 shadow-xl">
+          <div class="flex flex-wrap items-center justify-between gap-3">
+            <div class="flex flex-wrap items-center gap-3">
+              <span class="rounded-full bg-brand px-5 py-2 text-lg font-bold text-white">{{ COHORT.name }}</span>
+              <span class="rounded-full bg-ok/10 px-3 py-1 text-xs font-medium text-ok">● เปิดรับสมัคร · {{ COHORT.seatsLeft }} ที่นั่ง</span>
+            </div>
+            <NuxtLink to="/register" class="rounded-full bg-navy-800 px-5 py-2 text-sm font-semibold text-white">สมัครรุ่นนี้ →</NuxtLink>
+          </div>
+          <div class="mt-5 grid gap-4 md:grid-cols-3">
+            <div v-for="(s, i) in COHORT.sessions" :key="s.title" class="rounded-2xl bg-sky-card/60 p-4 text-sm">
+              <div class="flex items-center gap-2 font-semibold">
+                <component :is="sessionIcons[i]" class="size-4" />{{ s.title }}
+              </div>
+              <div class="mt-3 flex items-center gap-2"><CalendarDays class="size-4 text-brand" />{{ s.date }}</div>
+              <div class="mt-1 flex items-center gap-2"><Clock class="size-4 text-brand" />{{ s.time }}</div>
+              <div v-if="'extra' in s && s.extra" class="mt-1 flex items-center gap-2"><GraduationCap class="size-4 text-brand" />{{ s.extra }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Pricing -->
+    <section id="pricing" class="py-14">
+      <div class="mx-auto max-w-6xl px-5">
+        <h2 class="text-center text-3xl font-bold text-navy-800">ค่าอบรมหลักสูตร</h2>
+        <div class="mt-8 grid gap-5 md:grid-cols-3">
+          <template v-for="p in PACKAGES" :key="p.id">
+            <div v-if="p.id === 'bundle'" class="rounded-3xl bg-gradient-to-br from-brand to-brand-dark p-6 text-white shadow-xl">
+              <div class="font-semibold">★ พิเศษ! สมัครครบทั้ง 2 ภาค</div>
+              <div class="mt-1 text-xs opacity-90">จาก 17,000 บาท · ประหยัด 2,000 บาท</div>
+              <div class="mt-4 text-5xl font-bold">{{ baht(p.price) }} <span class="text-lg font-medium">บาท/คน</span></div>
+              <NuxtLink to="/register?package=bundle" class="mt-5 inline-block rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-dark">สมัครแพ็กเกจนี้</NuxtLink>
+            </div>
+            <div v-else class="rounded-3xl bg-white p-6 shadow-md">
+              <component :is="p.id === 'theory' ? Laptop : Hospital" class="size-7 text-navy-800" />
+              <div class="mt-3 text-lg font-bold text-navy-800">{{ p.short }}</div>
+              <div class="text-xs text-slate-500">{{ p.sub }}</div>
+              <div class="mt-4 text-3xl font-bold text-navy-800">{{ baht(p.price) }} <span class="text-sm font-medium">บาท/คน</span></div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </section>
+
+    <!-- Problems / Why -->
+    <section class="bg-sky-soft py-14">
+      <div class="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-2">
+        <div>
+          <h2 class="text-2xl font-bold text-navy-800">คุณกำลังเจอปัญหาเหล่านี้อยู่หรือเปล่า?</h2>
+          <ul class="mt-5 space-y-3">
+            <li v-for="t in PROBLEMS" :key="t" class="flex items-center gap-3 rounded-full bg-white px-4 py-2.5 text-sm shadow-sm">
+              <AlertCircle class="size-4 text-brand" />{{ t }}
+            </li>
+          </ul>
+          <p class="mt-5 font-bold text-navy-800">ส่งพนักงานมาเรียนพื้นฐานก่อน แล้วกลับไปฝึกต่อกับทีมของคุณ</p>
+        </div>
+        <div>
+          <h2 class="text-2xl font-bold text-navy-800">ทำไมโรงพยาบาลสัตว์ควรส่งพนักงานมาเรียนกับ VPP?</h2>
+          <div class="mt-5 grid gap-3 sm:grid-cols-2">
+            <div v-for="w in WHY" :key="w.t" class="rounded-2xl bg-white p-4 shadow-sm">
+              <component :is="w.icon" class="size-6 text-brand" />
+              <div class="mt-2 text-sm font-bold text-navy-800">{{ w.t }}</div>
+              <p class="mt-1 text-xs text-slate-600">{{ w.d }}</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Certificate / legal -->
+    <section class="py-10">
+      <div class="mx-auto grid max-w-6xl gap-5 px-5 md:grid-cols-2">
+        <div class="flex gap-4 rounded-2xl border border-sky-card bg-white p-5">
+          <Award class="size-8 shrink-0 text-brand" />
+          <div>
+            <div class="font-bold text-navy-800">ใบประกาศนียบัตรรับรองจากสัตวแพทยสภา</div>
+            <p class="mt-1 text-sm text-slate-600">เพิ่มความน่าเชื่อถือของบุคลากร และสนับสนุนการบริหารทีมในระบบของโรงพยาบาลสัตว์</p>
+          </div>
+        </div>
+        <div class="flex gap-4 rounded-2xl border border-sky-card bg-white p-5">
+          <Scale class="size-8 shrink-0 text-navy-800" />
+          <div>
+            <div class="font-bold text-navy-800">ถูกต้องตามกฎหมาย</div>
+            <p class="mt-1 text-sm text-slate-600">การอบรมไม่ได้ทำให้ผู้ช่วยสัตวแพทย์สามารถเป็นสัตวแพทย์ หรือทำหัตถการในขอบเขตวิชาชีพสัตวแพทย์ได้</p>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Articles -->
+    <section class="py-10">
+      <div class="mx-auto max-w-6xl px-5">
+        <div class="flex items-center justify-between">
+          <h2 class="flex items-center gap-2 text-2xl font-bold text-navy-800"><BookOpen class="text-brand" />บทความ</h2>
+          <span class="text-sm text-navy-800">ดูทั้งหมด →</span>
+        </div>
+        <p class="mt-4 text-sm text-slate-500">ยังไม่มีบทความที่เผยแพร่</p>
+      </div>
+    </section>
+
+    <!-- FAQ -->
+    <section class="bg-sky-soft py-14">
+      <div class="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-[2fr_1fr]">
+        <div>
+          <h2 class="text-2xl font-bold text-navy-800">คำถามที่ถามบ่อย</h2>
+          <div class="mt-4 divide-y divide-sky-card border-y border-sky-card">
+            <details v-for="f in FAQ" :key="f.q" class="group py-3">
+              <summary class="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
+                {{ f.q }}<ChevronDown class="size-4 text-slate-400 transition group-open:rotate-180" />
+              </summary>
+              <p class="mt-2 text-sm text-slate-600">{{ f.a }}</p>
+            </details>
+          </div>
+        </div>
+        <div>
+          <h2 class="flex items-center gap-2 text-2xl font-bold text-navy-800"><FileText class="text-brand" />เอกสารแนบ</h2>
+          <p class="mt-4 text-sm text-slate-500">ยังไม่มีเอกสารที่เผยแพร่</p>
+        </div>
+      </div>
+    </section>
+  </main>
+  <SiteFooter />
+</template>

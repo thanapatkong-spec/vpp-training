@@ -8,12 +8,12 @@ const EXT: Record<string, string> = { "image/jpeg": "jpg", "image/png": "png", "
 
 export const SLIP_MAX = 5 * 1024 * 1024;
 
-export async function saveSlip(file: File): Promise<string> {
-  const ext = EXT[file.type];
+export async function saveSlip(file: { type?: string; data: Buffer }): Promise<string> {
+  const ext = file.type ? EXT[file.type] : undefined;
   if (!ext) throw new Error("ไฟล์สลิปต้องเป็นรูปภาพหรือ PDF");
-  if (file.size > SLIP_MAX) throw new Error("ไฟล์สลิปต้องไม่เกิน 5MB");
+  if (file.data.length > SLIP_MAX) throw new Error("ไฟล์สลิปต้องไม่เกิน 5MB");
   await mkdir(DIR, { recursive: true });
   const key = `${randomUUID()}.${ext}`;
-  await writeFile(path.join(DIR, key), Buffer.from(await file.arrayBuffer()));
+  await writeFile(path.join(DIR, key), file.data);
   return key;
 }
