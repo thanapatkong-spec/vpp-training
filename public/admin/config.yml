@@ -1,0 +1,41 @@
+backend:
+  name: github
+  repo: thanapatkong-spec/vpp-training
+  branch: main
+
+publish_mode: simple # บันทึก = commit เข้า main → deploy อัตโนมัติ
+site_url: https://thanapatkong-spec.github.io/vpp-training/
+display_url: https://thanapatkong-spec.github.io/vpp-training/
+
+# รูปและไฟล์ที่อัปโหลดผ่านหน้านี้ไปอยู่ใน public/uploads (path บนเว็บ = /uploads/...)
+media_folder: public/uploads
+public_folder: /uploads
+
+collections:
+  - name: articles
+    label: บทความ / เนื้อหาอบรม
+    label_singular: บทความ
+    folder: content/articles
+    extension: md
+    format: frontmatter
+    create: true
+    slug: "{{year}}{{month}}{{day}}-{{hour}}{{minute}}{{second}}"
+    summary: "{{title}} · {{cohort}}"
+    sortable_fields: [date, title]
+    fields:
+      - { name: title, label: ชื่อบทความ, widget: string }
+      - { name: description, label: คำอธิบายสั้น (แสดงในรายการ), widget: text, required: false }
+      - { name: date, label: วันที่, widget: datetime, date_format: "YYYY-MM-DD", time_format: false, format: "YYYY-MM-DD" }
+      - { name: cohort, label: รุ่น (ใช้กรอง เช่น รุ่น พ.ย. 2569), widget: string, required: false }
+      - { name: draft, label: ฉบับร่าง (ยังไม่เผยแพร่), widget: boolean, default: false, required: false }
+      - { name: cover, label: รูปปก (แนะนำ 1200x630), widget: image, required: false }
+      - name: files
+        label: ไฟล์ให้ดาวน์โหลด
+        label_singular: ไฟล์
+        widget: list
+        required: false
+        fields:
+          - { name: title, label: ชื่อไฟล์ที่แสดง, widget: string }
+          - { name: path, label: ไฟล์, widget: file }
+          - { name: note, label: หมายเหตุ (เช่น PDF 1 MB), widget: string, required: false }
+      - { name: body, label: เนื้อหา, widget: markdown }
