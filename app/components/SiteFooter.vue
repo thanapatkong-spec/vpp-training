@@ -8,6 +8,12 @@ import { CONTACT } from "#shared/config";
       <div>
         <div class="text-3xl font-bold">VPP</div>
         <p class="mt-2 text-sm text-sky-card">พัฒนาคน เพื่อยกระดับมาตรฐานโรงพยาบาลสัตว์</p>
+        <nav class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-sky-card">
+          <NuxtLink to="/about" class="hover:text-white">เกี่ยวกับ VPP</NuxtLink>
+          <NuxtLink to="/collaboration" class="hover:text-white">ความร่วมมือ</NuxtLink>
+          <NuxtLink to="/articles" class="hover:text-white">บทความ</NuxtLink>
+          <NuxtLink to="/albums" class="hover:text-white">อัลบั้มรูป</NuxtLink>
+        </nav>
       </div>
       <div class="text-sm">
         <div class="font-semibold">เหมาะสำหรับ</div>
