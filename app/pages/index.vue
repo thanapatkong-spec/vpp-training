@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {
   Award, CalendarDays, ChevronDown, Clock, FileText, GraduationCap, Hospital,
-  Laptop, Scale, ShieldCheck, Stethoscope, Users, AlertCircle, BookOpen,
+  Laptop, Scale, ShieldCheck, Stethoscope, Users, AlertCircle, BookOpen, Download,
 } from "lucide-vue-next";
 import { CONTACT, COHORT, PACKAGES, baht } from "#shared/config";
 
@@ -9,8 +9,12 @@ const lineUrl = `https://line.me/R/ti/p/${encodeURIComponent(CONTACT.line)}`;
 const mailUrl = `mailto:${CONTACT.email}?subject=${encodeURIComponent("สมัครเรียนหลักสูตรผู้ช่วยสัตวแพทย์ (VPP)")}&body=${encodeURIComponent("ชื่อ-นามสกุล:\nเบอร์โทร:\nแพ็กเกจที่สนใจ (ภาคทฤษฎี / ภาคปฏิบัติ / ครบ 2 ภาค):\nโรงพยาบาล/คลินิกที่สังกัด:")}`;
 
 const { data: latest } = await useAsyncData("latest-articles", () =>
-  queryCollection("articles").order("date", "DESC").all().then((r) => r.filter((a) => !a.draft).slice(0, 3)),
+  queryCollection("articles").order("date", "DESC").all().then((r) => r.filter((a) => !a.draft)),
 );
+
+const asset = useAsset();
+const latestThree = computed(() => (latest.value ?? []).slice(0, 3));
+const docs = computed(() => (latest.value ?? []).flatMap((a) => (a.files ?? []).map((f) => ({ ...f, from: a.title }))).slice(0, 6));
 
 const sessionIcons = [Laptop, FileText, Hospital];
 
@@ -180,12 +184,15 @@ const FAQ = [
           <h2 class="flex items-center gap-2 text-2xl font-bold text-navy-800"><BookOpen class="text-brand" />บทความ</h2>
           <NuxtLink to="/articles" class="text-sm text-navy-800">ดูทั้งหมด →</NuxtLink>
         </div>
-        <ul v-if="latest?.length" class="mt-4 grid gap-4 md:grid-cols-3">
-          <li v-for="a in latest" :key="a.path">
-            <NuxtLink :to="a.path" class="block h-full rounded-2xl bg-white p-5 shadow-sm hover:shadow-md">
+        <ul v-if="latestThree.length" class="mt-4 grid gap-4 md:grid-cols-3">
+          <li v-for="a in latestThree" :key="a.path">
+            <NuxtLink :to="a.path" class="block h-full overflow-hidden rounded-2xl bg-white shadow-sm hover:shadow-md">
+              <img v-if="a.cover" :src="asset(a.cover)" :alt="a.title" class="h-36 w-full object-cover" />
+              <div class="p-5">
               <span v-if="a.cohort" class="rounded-full bg-brand px-2.5 py-0.5 text-xs font-semibold text-white">{{ a.cohort }}</span>
               <div class="mt-2 font-bold text-navy-800">{{ a.title }}</div>
               <p v-if="a.description" class="mt-1 text-sm text-slate-600">{{ a.description }}</p>
+              </div>
             </NuxtLink>
           </li>
         </ul>
@@ -209,7 +216,14 @@ const FAQ = [
         </div>
         <div>
           <h2 class="flex items-center gap-2 text-2xl font-bold text-navy-800"><FileText class="text-brand" />เอกสารแนบ</h2>
-          <p class="mt-4 text-sm text-slate-500">ยังไม่มีเอกสารที่เผยแพร่</p>
+          <ul v-if="docs.length" class="mt-4 space-y-2">
+            <li v-for="d in docs" :key="d.path">
+              <a :href="asset(d.path)" download class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-navy-800 shadow-sm hover:shadow-md">
+                <Download class="size-4 shrink-0 text-brand" /><span class="min-w-0 truncate">{{ d.title }}</span>
+              </a>
+            </li>
+          </ul>
+          <p v-else class="mt-4 text-sm text-slate-500">ยังไม่มีเอกสารที่เผยแพร่</p>
         </div>
       </div>
     </section>
