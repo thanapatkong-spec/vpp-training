@@ -9,6 +9,7 @@ const { data } = await useAsyncData("articles", () =>
 const cohorts = computed(() => [...new Set((data.value ?? []).map((a) => a.cohort).filter(Boolean))] as string[]);
 const active = ref("");
 const list = computed(() => (data.value ?? []).filter((a) => !active.value || a.cohort === active.value));
+const asset = useAsset();
 const fmt = (d: string) => new Date(d).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 </script>
 
@@ -29,13 +30,16 @@ const fmt = (d: string) => new Date(d).toLocaleDateString("th-TH", { year: "nume
 
     <ul class="mt-6 space-y-4">
       <li v-for="a in list" :key="a.path">
-        <NuxtLink :to="a.path" class="block rounded-2xl bg-white p-5 shadow-sm hover:shadow-md">
+        <NuxtLink :to="a.path" class="flex gap-4 rounded-2xl bg-white p-5 shadow-sm hover:shadow-md">
+          <img v-if="a.cover" :src="asset(a.cover)" :alt="a.title" class="hidden size-24 shrink-0 rounded-xl object-cover sm:block" />
+          <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">
             <span v-if="a.cohort" class="rounded-full bg-brand px-2.5 py-0.5 font-semibold text-white">{{ a.cohort }}</span>
             {{ fmt(a.date) }}
           </div>
           <h2 class="mt-2 text-lg font-bold text-navy-800">{{ a.title }}</h2>
           <p v-if="a.description" class="mt-1 text-sm text-slate-600">{{ a.description }}</p>
+          </div>
         </NuxtLink>
       </li>
     </ul>

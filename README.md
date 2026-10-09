@@ -18,6 +18,13 @@ npm run dev
 เว็บตอนนี้เป็นหน้าข้อมูลล้วน (static) — push เข้า `main` แล้ว workflow `.github/workflows/pages.yml` จะ build ด้วย `nuxt generate` และ deploy ให้อัตโนมัติ
 ต้องเปิดครั้งเดียว: Settings → Pages → Source = GitHub Actions · ลิงก์: `https://<user>.github.io/vpp-training/`
 
+## เพิ่มบทความ / รูป / ไฟล์ดาวน์โหลด
+1. **รูป** → วางใน `public/articles/` (รูปปกแนะนำ 1200×630) · **ไฟล์ดาวน์โหลด** (PDF ฯลฯ) → วางใน `public/downloads/`
+2. **บทความ** → สร้างไฟล์ `.md` ใน `content/articles/` โดยคัดลอกจาก `docs/article-template.md` (ตั้ง `cover`, `files`, `cohort`, `draft` ในหัวไฟล์)
+3. commit เข้า `main` → workflow deploy ให้เอง ไม่ต้องใช้ command line: บน GitHub กด **Add file → Upload files / Create new file** ได้เลย
+- ไฟล์ใน `files:` ของทุกบทความจะรวมในส่วน "เอกสารแนบ" ของหน้าแรกด้วย (6 ไฟล์ล่าสุด)
+- ชื่อไฟล์ใช้ภาษาอังกฤษ/ตัวเลข/ขีดกลาง จะปลอดภัยที่สุด
+
 ## โครงสร้าง
 - `app/pages/index.vue` หน้าข้อมูลหลักสูตร (ปุ่มสมัครเรียนส่งไป LINE@ / อีเมล)
 - `content/articles/*.md` บทความ/เนื้อหาอบรมแต่ละรุ่น (Nuxt Content — frontmatter: title, description, date, cohort, draft) · รูปไว้ใน `public/articles/`
