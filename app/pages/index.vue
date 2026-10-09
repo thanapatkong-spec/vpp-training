@@ -9,7 +9,7 @@ const lineUrl = `https://line.me/R/ti/p/${encodeURIComponent(CONTACT.line)}`;
 const mailUrl = `mailto:${CONTACT.email}?subject=${encodeURIComponent("สมัครเรียนหลักสูตรผู้ช่วยสัตวแพทย์ (VPP)")}&body=${encodeURIComponent("ชื่อ-นามสกุล:\nเบอร์โทร:\nแพ็กเกจที่สนใจ (ภาคทฤษฎี / ภาคปฏิบัติ / ครบ 2 ภาค):\nโรงพยาบาล/คลินิกที่สังกัด:")}`;
 
 const { data: latest } = await useAsyncData("latest-articles", () =>
-  queryCollection("articles").where("draft", "<>", true).order("date", "DESC").limit(3).all(),
+  queryCollection("articles").order("date", "DESC").all().then((r) => r.filter((a) => !a.draft).slice(0, 3)),
 );
 
 const sessionIcons = [Laptop, FileText, Hospital];

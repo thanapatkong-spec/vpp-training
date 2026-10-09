@@ -4,7 +4,7 @@ import { BookOpen } from "lucide-vue-next";
 useHead({ title: "บทความ · VPP" });
 
 const { data } = await useAsyncData("articles", () =>
-  queryCollection("articles").where("draft", "<>", true).order("date", "DESC").all(),
+  queryCollection("articles").order("date", "DESC").all().then((r) => r.filter((a) => !a.draft)),
 );
 const cohorts = computed(() => [...new Set((data.value ?? []).map((a) => a.cohort).filter(Boolean))] as string[]);
 const active = ref("");
