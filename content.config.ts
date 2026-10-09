@@ -3,6 +3,16 @@ import { z } from "zod";
 
 export default defineContentConfig({
   collections: {
+    // หน้าเนื้อหาคงที่ (เกี่ยวกับ VPP, ความร่วมมือ) — แก้ผ่าน /admin/ (ไฟล์ content/pages/*.md)
+    pages: defineCollection({
+      type: "page",
+      source: "pages/*.md",
+      schema: z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        cover: z.string().optional(),
+      }),
+    }),
     // คำถามที่ถามบ่อย — แก้ผ่าน /admin/ (ไฟล์ content/faq/*.yml)
     faq: defineCollection({
       type: "data",

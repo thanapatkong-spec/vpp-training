@@ -70,3 +70,25 @@ collections:
       - { name: file, label: ไฟล์, widget: file }
       - { name: note, label: หมายเหตุ (เช่น PDF 1 MB), widget: string, required: false }
       - { name: order, label: ลำดับ (เลขน้อยขึ้นก่อน), widget: number, value_type: int, default: 100, min: 1 }
+
+  - name: pages
+    label: หน้าเนื้อหา
+    files:
+      - name: about
+        label: เกี่ยวกับ VPP
+        file: content/pages/about.md
+        format: frontmatter
+        fields:
+          - { name: title, label: หัวข้อหน้า, widget: string }
+          - { name: description, label: คำโปรย, widget: string, required: false }
+          - { name: cover, label: รูปปก, widget: image, required: false }
+          - { name: body, label: เนื้อหา, widget: markdown }
+      - name: collaboration
+        label: ความร่วมมือ DR.john x คชาเวท
+        file: content/pages/collaboration.md
+        format: frontmatter
+        fields:
+          - { name: title, label: หัวข้อหน้า, widget: string }
+          - { name: description, label: คำโปรย, widget: string, required: false }
+          - { name: cover, label: รูปปก, widget: image, required: false }
+          - { name: body, label: เนื้อหา, widget: markdown }
