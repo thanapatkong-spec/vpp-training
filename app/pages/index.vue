@@ -14,7 +14,8 @@ const { data: latest } = await useAsyncData("latest-articles", () =>
 
 const asset = useAsset();
 const latestThree = computed(() => (latest.value ?? []).slice(0, 3));
-const docs = computed(() => (latest.value ?? []).flatMap((a) => (a.files ?? []).map((f) => ({ ...f, from: a.title }))).slice(0, 6));
+const { data: faq } = await useAsyncData("faq", () => queryCollection("faq").order("order", "ASC").all());
+const { data: docs } = await useAsyncData("documents", () => queryCollection("documents").order("order", "ASC").all());
 
 const sessionIcons = [Laptop, FileText, Hospital];
 
@@ -33,14 +34,6 @@ const WHY = [
   { icon: ShieldCheck, t: "บริหารบุคลากรเป็นระบบ", d: "มีประวัติการอบรม ผลการประเมิน และแผนพัฒนาทักษะต่อเนื่อง" },
 ];
 
-// คำตอบเป็นร่างจากข้อมูลในหน้าเว็บ — ตรวจแก้ข้อความจริงก่อนเปิดใช้
-const FAQ = [
-  { q: "หลักสูตรเรียนในรูปแบบใด?", a: "ภาคทฤษฎีเรียนสดออนไลน์ ตามด้วยสอบออนไลน์ และภาคปฏิบัติพร้อมสอบปฏิบัติ ณ รพส.คชาเวท ลาซาล" },
-  { q: "ค่าอบรมเท่าไร และเลือกเรียนแยกภาคได้หรือไม่?", a: "ภาคทฤษฎี 7,000 บาท ภาคปฏิบัติ 10,000 บาท หรือสมัครครบ 2 ภาค 15,000 บาท (ประหยัด 2,000 บาท) เลือกสมัครแยกภาคได้" },
-  { q: "สมัครเรียนและชำระเงินอย่างไร?", a: "ส่งชื่อ เบอร์โทร และแพ็กเกจที่สนใจมาทาง LINE หรืออีเมล ทีมงานจะแจ้งขั้นตอนการชำระเงินกลับไป" },
-  { q: "หลักสูตรเหมาะกับใคร?", a: "พนักงานใหม่ของโรงพยาบาลสัตว์ ผู้ช่วยแพทย์ที่ต้องการเพิ่มทักษะ และโรงพยาบาลสัตว์/คลินิกที่ต้องการพัฒนาทีม" },
-  { q: "ผ่านการอบรมแล้วสามารถทำงานแทนสัตวแพทย์ได้หรือไม่?", a: "ไม่ได้ การอบรมไม่ได้ทำให้ผู้ช่วยสัตวแพทย์เป็นสัตวแพทย์ หรือทำหัตถการในขอบเขตวิชาชีพสัตวแพทย์ได้" },
-];
 </script>
 
 <template>
@@ -206,20 +199,20 @@ const FAQ = [
         <div>
           <h2 class="text-2xl font-bold text-navy-800">คำถามที่ถามบ่อย</h2>
           <div class="mt-4 divide-y divide-sky-card border-y border-sky-card">
-            <details v-for="f in FAQ" :key="f.q" class="group py-3">
+            <details v-for="f in faq ?? []" :key="f.id" class="group py-3">
               <summary class="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
-                {{ f.q }}<ChevronDown class="size-4 text-slate-400 transition group-open:rotate-180" />
+                {{ f.question }}<ChevronDown class="size-4 text-slate-400 transition group-open:rotate-180" />
               </summary>
-              <p class="mt-2 text-sm text-slate-600">{{ f.a }}</p>
+              <p class="mt-2 whitespace-pre-line text-sm text-slate-600">{{ f.answer }}</p>
             </details>
           </div>
         </div>
         <div>
           <h2 class="flex items-center gap-2 text-2xl font-bold text-navy-800"><FileText class="text-brand" />เอกสารแนบ</h2>
-          <ul v-if="docs.length" class="mt-4 space-y-2">
-            <li v-for="d in docs" :key="d.path">
-              <a :href="asset(d.path)" download class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-navy-800 shadow-sm hover:shadow-md">
-                <Download class="size-4 shrink-0 text-brand" /><span class="min-w-0 truncate">{{ d.title }}</span>
+          <ul v-if="docs?.length" class="mt-4 space-y-2">
+            <li v-for="d in docs" :key="d.id">
+              <a :href="asset(d.file)" download class="flex items-center gap-2 rounded-xl bg-white px-3 py-2 text-sm text-navy-800 shadow-sm hover:shadow-md">
+                <Download class="size-4 shrink-0 text-brand" /><span class="min-w-0"><span class="block truncate">{{ d.title }}</span><span v-if="d.note" class="block truncate text-xs text-slate-500">{{ d.note }}</span></span>
               </a>
             </li>
           </ul>

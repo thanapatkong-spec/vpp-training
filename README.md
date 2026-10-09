@@ -22,7 +22,7 @@ npm run dev
 1. **รูป** → วางใน `public/articles/` (รูปปกแนะนำ 1200×630) · **ไฟล์ดาวน์โหลด** (PDF ฯลฯ) → วางใน `public/downloads/`
 2. **บทความ** → สร้างไฟล์ `.md` ใน `content/articles/` โดยคัดลอกจาก `docs/article-template.md` (ตั้ง `cover`, `files`, `cohort`, `draft` ในหัวไฟล์)
 3. commit เข้า `main` → workflow deploy ให้เอง ไม่ต้องใช้ command line: บน GitHub กด **Add file → Upload files / Create new file** ได้เลย
-- ไฟล์ใน `files:` ของทุกบทความจะรวมในส่วน "เอกสารแนบ" ของหน้าแรกด้วย (6 ไฟล์ล่าสุด)
+- ส่วน "เอกสารแนบ" หน้าแรก มาจาก `content/documents/*.yml` และ "คำถามที่ถามบ่อย" มาจาก `content/faq/*.yml` (แก้ผ่าน `/admin/` ได้)
 - ชื่อไฟล์ใช้ภาษาอังกฤษ/ตัวเลข/ขีดกลาง จะปลอดภัยที่สุด
 
 ## หน้าจัดการบทความ (CMS)

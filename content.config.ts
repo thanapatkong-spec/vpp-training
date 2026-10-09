@@ -3,6 +3,27 @@ import { z } from "zod";
 
 export default defineContentConfig({
   collections: {
+    // คำถามที่ถามบ่อย — แก้ผ่าน /admin/ (ไฟล์ content/faq/*.yml)
+    faq: defineCollection({
+      type: "data",
+      source: "faq/*.yml",
+      schema: z.object({
+        question: z.string(),
+        answer: z.string(),
+        order: z.number().default(100),
+      }),
+    }),
+    // เอกสารแนบหน้าแรก — แก้ผ่าน /admin/ (ไฟล์ content/documents/*.yml)
+    documents: defineCollection({
+      type: "data",
+      source: "documents/*.yml",
+      schema: z.object({
+        title: z.string(),
+        file: z.string(),
+        note: z.string().optional(),
+        order: z.number().default(100),
+      }),
+    }),
     // บทความ/เนื้อหาอบรม — เพิ่มไฟล์ .md ในโฟลเดอร์ content/articles/
     articles: defineCollection({
       type: "page",

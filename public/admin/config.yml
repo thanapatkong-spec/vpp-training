@@ -39,3 +39,34 @@ collections:
           - { name: path, label: ไฟล์, widget: file }
           - { name: note, label: หมายเหตุ (เช่น PDF 1 MB), widget: string, required: false }
       - { name: body, label: เนื้อหา, widget: markdown }
+
+  - name: faq
+    label: คำถามที่ถามบ่อย
+    label_singular: คำถาม
+    folder: content/faq
+    extension: yml
+    format: yml
+    create: true
+    slug: "{{year}}{{month}}{{day}}-{{hour}}{{minute}}{{second}}"
+    summary: "{{order}} · {{question}}"
+    sortable_fields: [order]
+    fields:
+      - { name: question, label: คำถาม, widget: string }
+      - { name: answer, label: คำตอบ, widget: text }
+      - { name: order, label: ลำดับ (เลขน้อยขึ้นก่อน), widget: number, value_type: int, default: 100, min: 1 }
+
+  - name: documents
+    label: เอกสารแนบ (หน้าแรก)
+    label_singular: เอกสาร
+    folder: content/documents
+    extension: yml
+    format: yml
+    create: true
+    slug: "{{year}}{{month}}{{day}}-{{hour}}{{minute}}{{second}}"
+    summary: "{{order}} · {{title}}"
+    sortable_fields: [order]
+    fields:
+      - { name: title, label: ชื่อเอกสารที่แสดง, widget: string }
+      - { name: file, label: ไฟล์, widget: file }
+      - { name: note, label: หมายเหตุ (เช่น PDF 1 MB), widget: string, required: false }
+      - { name: order, label: ลำดับ (เลขน้อยขึ้นก่อน), widget: number, value_type: int, default: 100, min: 1 }
