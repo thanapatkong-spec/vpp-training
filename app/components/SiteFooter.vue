@@ -12,6 +12,7 @@ import { CONTACT } from "#shared/config";
           <NuxtLink to="/about" class="hover:text-white">เกี่ยวกับ VPP</NuxtLink>
           <NuxtLink to="/collaboration" class="hover:text-white">ความร่วมมือ</NuxtLink>
           <NuxtLink to="/articles" class="hover:text-white">บทความ</NuxtLink>
+          <NuxtLink to="/albums" class="hover:text-white">อัลบั้มรูป</NuxtLink>
         </nav>
       </div>
       <div class="text-sm">

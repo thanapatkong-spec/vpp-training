@@ -3,6 +3,19 @@ import { z } from "zod";
 
 export default defineContentConfig({
   collections: {
+    // อัลบั้มรูป — แก้ผ่าน /admin/ (ไฟล์ content/albums/*.yml, รูปอยู่ใน public/uploads/)
+    albums: defineCollection({
+      type: "data",
+      source: "albums/*.yml",
+      schema: z.object({
+        title: z.string(),
+        description: z.string().optional(),
+        date: z.string(), // YYYY-MM-DD
+        cohort: z.string().optional(),
+        cover: z.string().optional(), // ไม่ใส่ = ใช้รูปแรก
+        photos: z.array(z.string()).default([]),
+      }),
+    }),
     // หน้าเนื้อหาคงที่ (เกี่ยวกับ VPP, ความร่วมมือ) — แก้ผ่าน /admin/ (ไฟล์ content/pages/*.md)
     pages: defineCollection({
       type: "page",

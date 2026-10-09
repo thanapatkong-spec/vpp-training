@@ -12,6 +12,7 @@
         <NuxtLink to="/#pricing" class="text-navy-800 hover:text-brand">ค่าอบรม</NuxtLink>
         <NuxtLink to="/about" class="hidden text-navy-800 hover:text-brand md:inline">เกี่ยวกับ VPP</NuxtLink>
         <NuxtLink to="/collaboration" class="hidden text-navy-800 hover:text-brand md:inline">ความร่วมมือ</NuxtLink>
+        <NuxtLink to="/albums" class="hidden text-navy-800 hover:text-brand md:inline">อัลบั้มรูป</NuxtLink>
         <NuxtLink to="/articles" class="text-navy-800 hover:text-brand">บทความ</NuxtLink>
         <NuxtLink to="/#contact" class="btn-brand px-4 py-2 text-sm">สมัครเรียน</NuxtLink>
       </nav>

@@ -92,3 +92,21 @@ collections:
           - { name: description, label: คำโปรย, widget: string, required: false }
           - { name: cover, label: รูปปก, widget: image, required: false }
           - { name: body, label: เนื้อหา, widget: markdown }
+
+  - name: albums
+    label: อัลบั้มรูป
+    label_singular: อัลบั้ม
+    folder: content/albums
+    extension: yml
+    format: yml
+    create: true
+    slug: "{{year}}{{month}}{{day}}-{{hour}}{{minute}}{{second}}"
+    summary: "{{date}} · {{title}}"
+    sortable_fields: [date, title]
+    fields:
+      - { name: title, label: ชื่ออัลบั้ม, widget: string }
+      - { name: description, label: คำอธิบาย, widget: text, required: false }
+      - { name: date, label: วันที่, widget: datetime, date_format: "YYYY-MM-DD", time_format: false, format: "YYYY-MM-DD" }
+      - { name: cohort, label: รุ่น (เช่น รุ่น พ.ย. 2569), widget: string, required: false }
+      - { name: cover, label: รูปปกอัลบั้ม (ไม่ใส่ = ใช้รูปแรก), widget: image, required: false }
+      - { name: photos, label: รูปในอัลบั้ม (เลือกหลายรูปพร้อมกันได้), widget: image, multiple: true, required: false }
