@@ -57,3 +57,6 @@ body {
 .prose-vpp li > ul, .prose-vpp li > ol { margin-top: 0.25rem; }
 .prose-vpp li + li { margin-top: 0.25rem; }
 .prose-vpp > div > :first-child { margin-top: 0; }
+
+/* โลโก้พันธมิตรในเนื้อหา (alt ขึ้นต้นด้วย "โลโก้") */
+.prose-vpp img[alt^="โลโก้"] { width: 8rem; height: 8rem; max-width: 100%; object-fit: contain; border-radius: 1rem; background: #fff; }
