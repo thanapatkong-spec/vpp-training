@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CheckCircle2 } from "lucide-vue-next";
+import { CheckCircle2, Mail } from "lucide-vue-next";
 import { APP_DOCS, APP_STATUS, ApplicationInput, EDUCATION, PREFIXES, validThaiId, type AppDocKind } from "#shared/application";
 import { COHORT, PACKAGES, baht } from "#shared/config";
 
@@ -9,7 +9,8 @@ const sessionState = auth.useSession();
 const session = computed(() => sessionState.value.data);
 const isPending = computed(() => sessionState.value.isPending);
 
-type Existing = { id: string; status: string; adminNote: string | null; files: { id: string; kind: string; name: string; status: string; note: string | null }[] } & Record<string, any>;
+type Pay = { id: string; amount: number; status: string; note: string | null; transRef: string | null; createdAt: string; paidAt: string | null };
+type Existing = { id: string; status: string; adminNote: string | null; files: { id: string; kind: string; name: string; status: string; note: string | null }[]; payment?: { amount: number; paid: boolean; pending: boolean; history: Pay[]; promptpay: { payload: string; name: string } | null; autoCheck: boolean } } & Record<string, any>;
 const existing = ref<Existing | null>(null);
 const loaded = ref(false);
 
@@ -149,6 +150,35 @@ async function submit() {
 }
 
 const pkg = computed(() => PACKAGES.find((p) => p.id === f.packageId));
+
+// ---- ชำระค่าเรียน (พร้อมเพย์ + สลิป) ----
+const qrSrc = ref("");
+const slip = ref<File>();
+const paying = ref(false);
+const payMsg = ref<{ ok: boolean; text: string } | null>(null);
+watch(() => existing.value?.payment?.promptpay?.payload, async (payload) => {
+  if (!payload) return (qrSrc.value = "");
+  const QR = await import("qrcode");
+  qrSrc.value = await QR.toDataURL(payload, { width: 280, margin: 1 });
+}, { immediate: true });
+async function sendSlip() {
+  payMsg.value = null;
+  if (!slip.value) return (payMsg.value = { ok: false, text: "กรุณากดปุ่ม \"แนบสลิป\" แล้วเลือกรูปสลิป" });
+  const fd = new FormData();
+  fd.append("slip", await shrink(slip.value));
+  paying.value = true;
+  try {
+    const r = await $fetch<{ status: string }>("/api/me/payment", { method: "POST", body: fd });
+    payMsg.value = { ok: true, text: r.status === "paid" ? "ชำระเงินสำเร็จ ระบบส่งอีเมลยืนยันให้แล้ว" : "ส่งสลิปแล้ว ทีมงานจะตรวจสอบและยืนยันทางอีเมล" };
+    slip.value = undefined;
+    existing.value = await $fetch<Existing | null>("/api/me/application");
+  } catch (e: any) {
+    payMsg.value = { ok: false, text: e?.data?.message || "ส่งสลิปไม่สำเร็จ" };
+    existing.value = await $fetch<Existing | null>("/api/me/application").catch(() => existing.value);
+  } finally {
+    paying.value = false;
+  }
+}
 const idHint = computed(() => (f.nationalId.replace(/\D/g, "").length === 13 && !validThaiId(f.nationalId.replace(/\D/g, "")) ? "เลขบัตรไม่ถูกต้อง ตรวจสอบอีกครั้ง" : ""));
 const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" }) : "-");
 </script>
@@ -177,11 +207,44 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
       </div>
       <p class="mt-2 text-sm text-slate-600">{{ existing.prefix }}{{ existing.firstName }} {{ existing.lastName }} · ส่งเมื่อ {{ fmt(existing.updatedAt) }}</p>
       <p v-if="existing.adminNote" class="mt-2 rounded-2xl bg-sky-soft px-4 py-2 text-sm text-slate-700">หมายเหตุจากทีมงาน: {{ existing.adminNote }}</p>
+      <!-- ชำระค่าเรียน -->
+      <div v-if="existing.status === 'approved' && existing.payment" class="mt-5 rounded-2xl border-2 p-5" :class="existing.payment.paid ? 'border-green-300 bg-green-50' : 'border-brand bg-orange-50/40'">
+        <template v-if="existing.payment.paid">
+          <p class="flex items-center gap-2 font-bold text-green-800"><CheckCircle2 class="size-5" />ชำระค่าเรียนแล้ว</p>
+          <p class="mt-1 text-sm text-slate-700">{{ baht(existing.payment.amount) }} บาท · เลขอ้างอิง {{ existing.payment.history.find((p) => p.status === "paid")?.transRef || "-" }} · ที่นั่งของคุณได้รับการยืนยันแล้ว</p>
+        </template>
+        <template v-else-if="existing.payment.pending">
+          <p class="font-bold text-navy-800">ส่งสลิปแล้ว รอทีมงานตรวจสอบ</p>
+          <p class="mt-1 text-sm text-slate-600">ทีมงานจะยืนยันการชำระทางอีเมล</p>
+        </template>
+        <template v-else>
+          <p class="font-bold text-navy-800">ชำระค่าเรียน {{ baht(existing.payment.amount) }} บาท</p>
+          <div v-if="existing.payment.promptpay" class="mt-3 flex flex-wrap items-start gap-5">
+            <div class="rounded-2xl bg-white p-3 text-center shadow-sm">
+              <img v-if="qrSrc" :src="qrSrc" alt="QR พร้อมเพย์" class="size-48" />
+              <p class="mt-1 text-xs text-slate-500">สแกนด้วยแอปธนาคาร</p>
+            </div>
+            <div class="min-w-[14rem] flex-1 text-sm text-slate-700">
+              <p>ชื่อบัญชี: <b>{{ existing.payment.promptpay.name }}</b></p>
+              <p>ยอดชำระ: <b>{{ baht(existing.payment.amount) }} บาท</b> (ยอดอยู่ใน QR แล้ว)</p>
+              <p class="mt-3 text-xs text-slate-500">โอนแล้ว บันทึกภาพสลิปจากแอปธนาคาร แล้วแนบด้านล่าง{{ existing.payment.autoCheck ? " ระบบตรวจสลิปและยืนยันให้ทันที" : " ทีมงานจะตรวจและยืนยันทางอีเมล" }}</p>
+              <FilePickButton v-model="slip" label="แนบสลิป" accept="image/jpeg,image/png" :max-mb="10" class="mt-2" />
+              <button :disabled="paying" class="btn-brand mt-3 px-6 py-2.5 text-sm disabled:opacity-60" @click="sendSlip">{{ paying ? "กำลังตรวจสลิป..." : "ส่งสลิป" }}</button>
+            </div>
+          </div>
+          <p v-else class="mt-2 text-sm text-slate-600">ทีมงานจะแจ้งช่องทางชำระทางอีเมล</p>
+          <p v-if="existing.payment.history[0]?.status === 'rejected'" class="mt-3 text-xs text-red-700">สลิปล่าสุดไม่ผ่าน: {{ existing.payment.history[0].note }}</p>
+        </template>
+        <p v-if="payMsg" class="mt-3 text-sm" :class="payMsg.ok ? 'text-green-700' : 'text-red-700'">{{ payMsg.text }}</p>
+      </div>
+
+      <p class="mt-4 flex items-center gap-2 text-xs text-slate-500"><Mail class="size-4" />ทีมงานจะแจ้งทุกขั้นตอนทางอีเมล {{ session?.user.email }} มีข้อสงสัยตอบกลับอีเมลได้เลย</p>
+
       <div class="mt-5 rounded-2xl border border-sky-card p-4 text-sm text-slate-700">
         <p class="font-semibold text-navy-800">ขั้นตอนต่อไป</p>
         <ol class="mt-2 list-decimal space-y-1 pl-5">
           <li>ทีมงานตรวจสอบใบสมัครและเอกสาร</li>
-          <li>เมื่อผ่านการตรวจสอบ ชำระ <b>ค่าเรียน</b> ให้ Dr.John (ทีมงานแจ้งช่องทางชำระ)</li>
+          <li>เมื่อผ่านการตรวจสอบ ชำระ <b>ค่าเรียน</b> ให้ Dr.John ผ่านพร้อมเพย์ในหน้านี้ แล้วแนบสลิป</li>
           <li>ชำระ <b>ค่าตรวจสอบคุณสมบัติ</b> ให้สัตวแพทยสภา ตามช่องทางที่สัตวแพทยสภากำหนด</li>
         </ol>
       </div>

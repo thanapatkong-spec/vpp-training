@@ -195,3 +195,19 @@ export const applicationFiles = pgTable("application_files", {
   note: text("note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// การชำระค่าเรียน (พร้อมเพย์ + สลิป) ตรวจสลิปอัตโนมัติ หรือแอดมินตรวจเอง
+export const payments = pgTable("payments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  applicationId: uuid("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  status: text("status").notNull().default("pending"), // pending (รอแอดมินตรวจ) | paid | rejected
+  slipName: text("slip_name"),
+  slipType: text("slip_type"),
+  slipData: bytea("slip_data"),
+  transRef: text("trans_ref").unique(), // เลขอ้างอิงธุรกรรมจากสลิป กันใช้สลิปซ้ำ
+  verifiedBy: text("verified_by"), // slip-api | อีเมลแอดมิน
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
+});
