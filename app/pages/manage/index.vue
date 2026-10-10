@@ -1,6 +1,7 @@
 <script setup lang="ts">
-useHead({ title: "จัดการคำขอใบประกาศ · VPP" });
+useHead({ title: "ระบบแอดมิน · VPP" });
 const auth = useAuthClient();
+const asset = useAsset();
 const sessionState = auth.useSession(); // Ref<{ data, isPending, error }>
 const session = computed(() => sessionState.value.data);
 const isPending = computed(() => sessionState.value.isPending);
@@ -24,7 +25,53 @@ async function submitKey() {
   await load();
 }
 
-type Member = { id: string; name: string; email: string; phone: string | null; cohort: string | null };
+type Member = { id: string; name: string; email: string; emailVerified: boolean; phone: string | null; cohort: string | null; imported: boolean; certCount: number; admin: boolean };
+type Cert = { id: string; title: string; certNo: string | null; issuedOn: string | null };
+const tab = ref<"members" | "claims" | "content">("members");
+const openId = ref("");
+const certs = ref<Cert[]>([]);
+const cf = reactive<{ file?: File; title: string; certNo: string; issuedOn: string; busy: boolean; err: string; ok: string }>({ title: "", certNo: "", issuedOn: "", busy: false, err: "", ok: "" });
+async function toggleCerts(m: Member) {
+  if (openId.value === m.id) return (openId.value = "");
+  openId.value = m.id;
+  Object.assign(cf, { file: undefined, title: "", certNo: "", issuedOn: "", err: "", ok: "" });
+  certs.value = [];
+  await loadCerts(m.id);
+}
+async function loadCerts(id: string) {
+  try {
+    certs.value = await $fetch<Cert[]>(`/api/manage/members/${id}/certificates`, { headers: authHeaders() });
+  } catch {}
+}
+async function issueCert(m: Member) {
+  cf.err = cf.ok = "";
+  if (!cf.file) return (cf.err = "กรุณาเลือกไฟล์ PDF ใบประกาศ");
+  const fd = new FormData();
+  fd.append("file", cf.file);
+  if (cf.title) fd.append("title", cf.title);
+  if (cf.certNo) fd.append("certNo", cf.certNo);
+  if (cf.issuedOn) fd.append("issuedOn", cf.issuedOn);
+  cf.busy = true;
+  try {
+    await $fetch(`/api/manage/members/${m.id}/certificates`, { method: "POST", body: fd, headers: authHeaders() });
+    cf.ok = "ออกใบประกาศให้สมาชิกแล้ว สมาชิกดาวน์โหลดได้ที่หน้าบัญชีของฉัน";
+    Object.assign(cf, { file: undefined, title: "", certNo: "", issuedOn: "" });
+    await Promise.all([loadCerts(m.id), loadMembers()]);
+  } catch (e: any) {
+    cf.err = e?.data?.message || "ออกใบประกาศไม่สำเร็จ";
+  } finally {
+    cf.busy = false;
+  }
+}
+async function removeCert(m: Member, c: Cert) {
+  if (!confirm(`ลบใบประกาศ "${c.title}" ของ ${m.name} ?`)) return;
+  try {
+    await $fetch(`/api/manage/certificates/${c.id}`, { method: "DELETE", headers: authHeaders() });
+    await Promise.all([loadCerts(m.id), loadMembers()]);
+  } catch (e: any) {
+    alert(e?.data?.message || "ลบไม่สำเร็จ");
+  }
+}
 const members = ref<Member[]>([]);
 const q = ref("");
 const cohortFilter = ref("");
@@ -166,7 +213,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
 <template>
   <SiteHeader />
   <main class="mx-auto w-full max-w-4xl px-5 py-12">
-    <h1 class="text-3xl font-bold text-navy-800">จัดการคำขอใบประกาศนียบัตร</h1>
+    <h1 class="text-3xl font-bold text-navy-800">ระบบแอดมิน VPP</h1>
     <div v-if="forbidden" class="mt-6 rounded-2xl bg-red-50 px-4 py-4 text-sm text-red-700">
       <p>หน้านี้สำหรับแอดมินเท่านั้น: อีเมลต้องอยู่ในรายชื่อแอดมิน และยืนยันอีเมลแล้ว หรือกรอกรหัสแอดมินด้านล่าง</p>
       <form class="mt-3 flex flex-wrap gap-2" @submit.prevent="submitKey">
@@ -174,9 +221,19 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         <button class="btn-brand px-5 py-2 text-sm">เข้าใช้งาน</button>
       </form>
     </div>
-    <p v-else-if="loaded && !rows.length" class="mt-6 text-sm text-slate-500">ยังไม่มีคำขอ</p>
+    <nav v-if="!forbidden" class="mt-6 flex flex-wrap gap-2 text-sm font-semibold">
+      <button v-for="t in ([['members', 'สมาชิกและใบประกาศ'], ['claims', `คำขอใบประกาศ${rows.some((r) => r.status === 'pending') ? ` (${rows.filter((r) => r.status === 'pending').length})` : ''}`], ['content', 'เนื้อหาเว็บ']] as const)" :key="t[0]"
+        class="rounded-full px-5 py-2" :class="tab === t[0] ? 'bg-navy-800 text-white' : 'bg-white text-navy-800 shadow-sm'" @click="tab = t[0]">{{ t[1] }}</button>
+    </nav>
 
-    <ul class="mt-6 space-y-4">
+    <section v-if="!forbidden && tab === 'content'" class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-bold text-navy-800">จัดการเนื้อหาเว็บ</h2>
+      <p class="mt-1 text-sm text-slate-600">แก้ไขบทความ คำถามที่พบบ่อย เอกสารแนบ หน้าเกี่ยวกับ/ความร่วมมือ และอัลบั้มรูป (เข้าสู่ระบบด้วย GitHub Token เดิม เมื่อบันทึกแล้วเว็บจะอัปเดตเอง)</p>
+      <a :href="asset('/admin/')" target="_blank" class="btn-brand mt-4 inline-block px-6 py-3 text-sm">เปิดหน้าจัดการเนื้อหา</a>
+    </section>
+
+    <p v-if="!forbidden && tab === 'claims' && loaded && !rows.length" class="mt-6 text-sm text-slate-500">ยังไม่มีคำขอ</p>
+    <ul v-if="tab === 'claims'" class="mt-6 space-y-4">
       <li v-for="r in rows" :key="r.id" class="rounded-3xl bg-white p-5 shadow-sm">
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div class="font-bold text-navy-800">{{ r.fullName }} · {{ r.cohort }}</div>
@@ -204,7 +261,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
       </li>
     </ul>
 
-    <section v-if="!forbidden" class="mt-12 rounded-3xl bg-white p-6 shadow-sm">
+    <section v-if="!forbidden && tab === 'members'" class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
       <h2 class="text-xl font-bold text-navy-800">นำเข้าสมาชิกจากรายชื่อ (Excel)</h2>
       <p class="mt-1 text-sm text-slate-600">เลือกไฟล์ .xlsx ที่มีชีต "VPP 1", "VPP 2", ... คอลัมน์ ชื่อ-สกุล / เบอร์โทรศัพท์ / อีเมล ระบบจะสร้างบัญชีสมาชิกที่ยังไม่มีรหัสผ่าน (ข้ามคนที่ไม่มีอีเมลหรือมีบัญชีแล้ว) สมาชิกเข้าสู่ระบบด้วย Google อีเมลเดียวกัน หรือใช้ "ลืมรหัสผ่าน" เพื่อตั้งรหัสผ่าน</p>
       <input type="file" accept=".xlsx" class="mt-4 block text-sm" @change="pickExcel" />
@@ -221,8 +278,8 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
       </div>
     </section>
 
-    <section v-if="!forbidden" class="mt-8 rounded-3xl bg-white p-6 shadow-sm">
-      <h2 class="text-xl font-bold text-navy-800">รายชื่อสมาชิกที่นำเข้า <span class="text-base font-normal text-slate-500">({{ shown.length }}/{{ members.length }} คน)</span></h2>
+    <section v-if="!forbidden && tab === 'members'" class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-bold text-navy-800">สมาชิกทั้งหมด <span class="text-base font-normal text-slate-500">({{ shown.length }}/{{ members.length }} คน)</span></h2>
       <div class="mt-3 flex flex-wrap gap-2">
         <input v-model="q" class="field max-w-xs" placeholder="ค้นหาชื่อ / อีเมล / เบอร์" />
         <select v-model="cohortFilter" class="field max-w-[10rem]">
@@ -230,20 +287,54 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
           <option v-for="c in cohorts" :key="c" :value="c">{{ c }}</option>
         </select>
       </div>
-      <p v-if="!members.length" class="mt-4 text-sm text-slate-500">ยังไม่มีสมาชิกที่นำเข้า</p>
+      <p v-if="!members.length" class="mt-4 text-sm text-slate-500">ยังไม่มีสมาชิก</p>
       <div v-else class="mt-4 overflow-x-auto">
         <table class="w-full text-left text-sm">
           <thead class="text-xs text-slate-500">
             <tr><th class="py-2 pr-3">ชื่อ-สกุล</th><th class="pr-3">อีเมล</th><th class="pr-3">เบอร์โทร</th><th class="pr-3">รุ่น</th><th /></tr>
           </thead>
           <tbody>
-            <tr v-for="m in shown" :key="m.id" class="border-t border-sky-card">
-              <td class="py-2 pr-3 font-medium text-navy-800">{{ m.name }}</td>
-              <td class="pr-3">{{ m.email }}</td>
-              <td class="pr-3">{{ m.phone || "-" }}</td>
-              <td class="pr-3">{{ m.cohort || "-" }}</td>
-              <td class="text-right"><button class="text-xs text-red-600 hover:underline" @click="removeMember(m)">ลบ</button></td>
-            </tr>
+            <template v-for="m in shown" :key="m.id">
+              <tr class="border-t border-sky-card align-top">
+                <td class="py-2 pr-3 font-medium text-navy-800">{{ m.name }}
+                  <span v-if="m.admin" class="ml-1 rounded-full bg-navy-800 px-2 py-0.5 text-[10px] text-white">แอดมิน</span>
+                  <span v-else-if="!m.imported" class="ml-1 rounded-full bg-sky-card px-2 py-0.5 text-[10px] text-navy-800">สมัครเอง</span>
+                </td>
+                <td class="pr-3">{{ m.email }}</td>
+                <td class="pr-3">{{ m.phone || "-" }}</td>
+                <td class="pr-3">{{ m.cohort || "-" }}</td>
+                <td class="whitespace-nowrap text-right">
+                  <button class="mr-3 rounded-full border border-navy-800 px-3 py-1 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="toggleCerts(m)">ใบประกาศ ({{ m.certCount }})</button>
+                  <button v-if="m.imported && !m.admin" class="text-xs text-red-600 hover:underline" @click="removeMember(m)">ลบ</button>
+                </td>
+              </tr>
+              <tr v-if="openId === m.id" class="bg-sky-soft">
+                <td colspan="5" class="px-4 py-4">
+                  <p class="font-semibold text-navy-800">ใบประกาศของ {{ m.name }}</p>
+                  <ul v-if="certs.length" class="mt-2 space-y-1">
+                    <li v-for="c in certs" :key="c.id" class="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                      <span>{{ c.title }}<span v-if="c.certNo" class="text-slate-500"> · เลขที่ {{ c.certNo }}</span><span v-if="c.issuedOn" class="text-slate-500"> · {{ c.issuedOn }}</span></span>
+                      <span class="whitespace-nowrap">
+                        <a :href="`/api/certificates/${c.id}/file`" target="_blank" class="mr-3 text-xs text-navy-800 hover:underline">เปิดไฟล์</a>
+                        <button class="text-xs text-red-600 hover:underline" @click="removeCert(m, c)">ลบ</button>
+                      </span>
+                    </li>
+                  </ul>
+                  <p v-else class="mt-1 text-xs text-slate-500">ยังไม่มีใบประกาศ</p>
+                  <div class="mt-3 grid gap-2 md:grid-cols-2">
+                    <label class="text-xs text-slate-600">ไฟล์ PDF ใบประกาศ (ไม่เกิน 4MB) *
+                      <input type="file" accept="application/pdf" class="mt-1 block w-full text-sm" @change="cf.file = ($event.target as HTMLInputElement).files?.[0]" />
+                    </label>
+                    <input v-model="cf.title" class="field self-end" placeholder="ชื่อใบประกาศ (เว้นว่าง = ค่าเริ่มต้น)" />
+                    <input v-model="cf.certNo" class="field" placeholder="เลขที่ใบประกาศ (ถ้ามี)" />
+                    <label class="text-xs text-slate-600">วันที่ออกใบ <input v-model="cf.issuedOn" type="date" class="field mt-1" /></label>
+                  </div>
+                  <p v-if="cf.err" class="mt-2 text-sm text-red-700">{{ cf.err }}</p>
+                  <p v-if="cf.ok" class="mt-2 text-sm text-green-700">{{ cf.ok }}</p>
+                  <button :disabled="cf.busy" class="btn-brand mt-3 px-5 py-2 text-sm disabled:opacity-60" @click="issueCert(m)">ออกใบประกาศให้สมาชิกคนนี้</button>
+                </td>
+              </tr>
+            </template>
           </tbody>
         </table>
       </div>

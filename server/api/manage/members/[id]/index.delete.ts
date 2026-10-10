@@ -1,5 +1,5 @@
 import { eq } from "drizzle-orm";
-import { memberProfiles, user } from "../../../db/schema";
+import { memberProfiles, user } from "../../../../db/schema";
 
 // แอดมิน: ลบสมาชิกที่นำเข้า (เฉพาะบัญชีที่มีข้อมูลนำเข้า และไม่ใช่อีเมลแอดมิน)
 export default defineEventHandler(async (event) => {
