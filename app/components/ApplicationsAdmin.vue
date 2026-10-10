@@ -5,7 +5,7 @@ import { PACKAGES } from "#shared/config";
 const props = defineProps<{ authHeaders: () => Record<string, string> | undefined }>();
 const openFile = useAuthedOpen(props.authHeaders);
 
-type Row = { id: string; cohortId: string; packageId: string; prefix: string; firstName: string; lastName: string; nationalId: string; phone: string; workplace: string; status: string; createdAt: string; updatedAt: string; email: string };
+type Row = { payStatus: string | null; id: string; cohortId: string; packageId: string; prefix: string; firstName: string; lastName: string; nationalId: string; phone: string; workplace: string; status: string; createdAt: string; updatedAt: string; email: string };
 type FileMeta = { id: string; kind: string; name: string; contentType: string; size: number; status: string; note: string | null };
 type Detail = Record<string, any> & { files: FileMeta[] };
 
@@ -55,6 +55,17 @@ async function decide(status: "approved" | "needs_changes" | "rejected") {
     busy.value = false;
   }
 }
+async function payAction(id: string, action: "approve" | "reject") {
+  const note = action === "reject" ? prompt("เหตุผลที่สลิปไม่ผ่าน (ส่งให้ผู้สมัครทางอีเมล)") ?? undefined : undefined;
+  if (action === "approve" && !confirm("ยืนยันว่าได้รับเงินแล้ว? ระบบจะส่งอีเมลยืนยันให้ผู้สมัคร")) return;
+  try {
+    await $fetch(`/api/manage/payments/${id}`, { method: "POST", body: { action, note }, headers: props.authHeaders() });
+    detail.value = await $fetch<Detail>(`/api/manage/applications/${detail.value!.id}`, { headers: props.authHeaders() });
+    await load();
+  } catch (e: any) {
+    alert(e?.data?.message || "ไม่สำเร็จ");
+  }
+}
 const pkgName = (id: string) => PACKAGES.find((p) => p.id === id)?.short || id;
 const docLabel = (k: string) => APP_DOCS.find((d) => d.kind === k)?.label || k;
 const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: "numeric", month: "short", day: "numeric" }) : "-");
@@ -87,20 +98,23 @@ onMounted(load);
     <ul class="mt-4 divide-y divide-sky-card">
       <li v-for="r in shown" :key="r.id">
         <button class="flex w-full flex-wrap items-center justify-between gap-2 py-3 text-left" @click="toggle(r)">
-          <span><b class="text-navy-800">{{ r.prefix }}{{ r.firstName }} {{ r.lastName }}</b> <span class="text-xs text-slate-500">· {{ r.workplace }} · {{ pkgName(r.packageId) }} · {{ fmt(r.updatedAt) }}</span></span>
-          <span class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="APP_STATUS[r.status]?.[1]">{{ APP_STATUS[r.status]?.[0] }}</span>
+          <span><b class="text-navy-800">{{ r.prefix }}{{ r.firstName }} {{ r.lastName }}</b> <span class="text-xs text-slate-500">· {{ r.workplace || "ไม่ระบุที่ทำงาน" }} · {{ pkgName(r.packageId) }} · {{ fmt(r.updatedAt) }}</span></span>
+          <span class="flex gap-1">
+            <span v-if="r.payStatus === 'paid'" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ชำระแล้ว</span>
+            <span v-else-if="r.payStatus === 'pending'" class="rounded-full bg-amber-500 px-3 py-0.5 text-xs font-semibold text-white">สลิปรอตรวจ</span>
+            <span class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="APP_STATUS[r.status]?.[1]">{{ APP_STATUS[r.status]?.[0] }}</span>
+          </span>
         </button>
         <div v-if="openId === r.id" class="mb-4 rounded-2xl bg-sky-soft p-4 text-sm">
           <p v-if="!detail" class="text-slate-500">กำลังโหลด...</p>
           <template v-else>
             <dl class="grid gap-x-6 gap-y-2 md:grid-cols-2">
-              <div><dt class="text-xs text-slate-500">ชื่อ-นามสกุล</dt><dd>{{ detail.prefix }}{{ detail.firstName }} {{ detail.lastName }}<span v-if="detail.nameEn" class="text-slate-500"> ({{ detail.nameEn }})</span></dd></div>
-              <div><dt class="text-xs text-slate-500">เลขบัตรประชาชน / วันเกิด</dt><dd>{{ detail.nationalId }} · {{ fmt(detail.birthDate) }}</dd></div>
+              <div><dt class="text-xs text-slate-500">ชื่อ-นามสกุล</dt><dd>{{ detail.prefix }}{{ detail.firstName }} {{ detail.lastName }}</dd></div>
+              <div><dt class="text-xs text-slate-500">เลขบัตรประชาชน / วันเกิด</dt><dd>{{ detail.nationalId }} · {{ detail.birthDate ? fmt(detail.birthDate) : "-" }}</dd></div>
               <div><dt class="text-xs text-slate-500">ติดต่อ</dt><dd>{{ detail.phone }} · {{ detail.email }}<span v-if="detail.lineId"> · LINE {{ detail.lineId }}</span></dd></div>
-              <div><dt class="text-xs text-slate-500">ที่อยู่</dt><dd class="whitespace-pre-line">{{ detail.address }}</dd></div>
+              <div><dt class="text-xs text-slate-500">ที่อยู่</dt><dd class="whitespace-pre-line">{{ detail.address || "-" }}</dd></div>
               <div><dt class="text-xs text-slate-500">วุฒิการศึกษา</dt><dd>{{ detail.education }}<span v-if="detail.school"> · {{ detail.school }}</span></dd></div>
-              <div><dt class="text-xs text-slate-500">ที่ทำงาน</dt><dd>{{ detail.workplace }}<span v-if="detail.position"> · {{ detail.position }}</span><span v-if="detail.experienceYears != null"> · {{ detail.experienceYears }} ปี</span></dd></div>
-              <div><dt class="text-xs text-slate-500">สัตวแพทย์ผู้ควบคุม</dt><dd>{{ detail.vetName }} · ใบอนุญาต {{ detail.vetLicense }}<span v-if="detail.vetPhone"> · {{ detail.vetPhone }}</span></dd></div>
+              <div><dt class="text-xs text-slate-500">ที่ทำงาน</dt><dd>{{ detail.workplace || "-" }}<span v-if="detail.position"> · {{ detail.position }}</span><span v-if="detail.experienceYears != null"> · {{ detail.experienceYears }} ปี</span></dd></div>
               <div><dt class="text-xs text-slate-500">รุ่น / แพ็กเกจ / ผู้ชำระ</dt><dd>{{ detail.cohortId }} · {{ pkgName(detail.packageId) }} · {{ detail.payer === "employer" ? `นายจ้าง: ${detail.invoiceName}${detail.invoiceTaxId ? ` (${detail.invoiceTaxId})` : ""}` : "ชำระเอง" }}</dd></div>
             </dl>
             <p class="mt-4 font-semibold text-navy-800">เอกสาร</p>
@@ -114,6 +128,22 @@ onMounted(load);
                 <input v-if="review.files[fl.id]!.status === 'rejected'" v-model="review.files[fl.id]!.note" class="field max-w-xs py-1 text-xs" placeholder="เหตุผล เช่น ภาพไม่ชัด" />
               </li>
             </ul>
+            <template v-if="detail.status === 'approved'">
+              <p class="mt-4 font-semibold text-navy-800">การชำระค่าเรียน ({{ detail.amount?.toLocaleString("th-TH") }} บาท)</p>
+              <p v-if="!detail.payments?.length" class="mt-1 text-xs text-slate-500">ยังไม่มีการชำระ</p>
+              <ul class="mt-2 space-y-2">
+                <li v-for="py in detail.payments" :key="py.id" class="flex flex-wrap items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs">
+                  <span class="rounded-full px-2 py-0.5 font-semibold" :class="py.status === 'paid' ? 'bg-green-100 text-green-800' : py.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'">{{ py.status === "paid" ? "ชำระแล้ว" : py.status === "pending" ? "รอตรวจ" : "ไม่ผ่าน" }}</span>
+                  <span>{{ fmt(py.createdAt) }} · {{ py.transRef || "-" }} · {{ py.verifiedBy || "" }}</span>
+                  <span v-if="py.note" class="text-slate-500">{{ py.note }}</span>
+                  <button v-if="py.hasSlip" class="underline" @click="openFile(`/api/payments/${py.id}/slip`)">ดูสลิป</button>
+                  <template v-if="py.status !== 'paid'">
+                    <button class="rounded-full bg-green-600 px-3 py-1 text-white" @click="payAction(py.id, 'approve')">ยืนยันว่าชำระแล้ว</button>
+                    <button v-if="py.status === 'pending'" class="rounded-full border border-red-300 px-3 py-1 text-red-700" @click="payAction(py.id, 'reject')">สลิปไม่ผ่าน</button>
+                  </template>
+                </li>
+              </ul>
+            </template>
             <label class="mt-4 block text-xs text-slate-600">หมายเหตุถึงผู้สมัคร
               <textarea v-model="review.note" rows="2" class="field mt-1" placeholder="เช่น กรุณาแนบสำเนาวุฒิที่เห็นชื่อชัดเจน" />
             </label>

@@ -158,17 +158,17 @@ export const applications = pgTable("applications", {
   lastName: text("last_name").notNull(),
   nameEn: text("name_en"),
   nationalId: text("national_id").notNull(),
-  birthDate: date("birth_date", { mode: "string" }).notNull(),
+  birthDate: date("birth_date", { mode: "string" }),
   phone: text("phone").notNull(),
   lineId: text("line_id"),
-  address: text("address").notNull(),
+  address: text("address"),
   education: text("education").notNull(),
   school: text("school"),
-  workplace: text("workplace").notNull(),
+  workplace: text("workplace"),
   position: text("position"),
   experienceYears: integer("experience_years"),
-  vetName: text("vet_name").notNull(),
-  vetLicense: text("vet_license").notNull(),
+  vetName: text("vet_name"), // ไม่ใช้แล้ว (เก็บไว้ไม่ให้ข้อมูลเก่าหาย)
+  vetLicense: text("vet_license"),
   vetPhone: text("vet_phone"),
   payer: text("payer").notNull().default("self"), // self | employer
   invoiceName: text("invoice_name"),
@@ -194,4 +194,20 @@ export const applicationFiles = pgTable("application_files", {
   status: text("status").notNull().default("pending"), // pending | ok | rejected
   note: text("note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// การชำระค่าเรียน (พร้อมเพย์ + สลิป) ตรวจสลิปอัตโนมัติ หรือแอดมินตรวจเอง
+export const payments = pgTable("payments", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  applicationId: uuid("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  amount: integer("amount").notNull(),
+  status: text("status").notNull().default("pending"), // pending (รอแอดมินตรวจ) | paid | rejected
+  slipName: text("slip_name"),
+  slipType: text("slip_type"),
+  slipData: bytea("slip_data"),
+  transRef: text("trans_ref").unique(), // เลขอ้างอิงธุรกรรมจากสลิป กันใช้สลิปซ้ำ
+  verifiedBy: text("verified_by"), // slip-api | อีเมลแอดมิน
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  paidAt: timestamp("paid_at", { withTimezone: true }),
 });

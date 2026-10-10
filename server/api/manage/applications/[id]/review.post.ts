@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { z } from "zod";
-import { applicationFiles, applications, memberProfiles } from "../../../../db/schema";
+import { applicationFiles, applications, memberProfiles, user } from "../../../../db/schema";
 
 const Body = z.object({
   status: z.enum(["approved", "needs_changes", "rejected"]),
@@ -31,5 +31,9 @@ export default defineEventHandler(async (event) => {
       await tx.insert(memberProfiles).values({ userId: app.userId, phone: app.phone, imported: false }).onConflictDoNothing();
     }
   });
+  const [owner] = await db.select({ email: user.email }).from(user).where(eq(user.id, app.userId)).limit(1);
+  const fileRows = await db.select({ id: applicationFiles.id, kind: applicationFiles.kind }).from(applicationFiles).where(eq(applicationFiles.applicationId, id));
+  const rejectedDocs = b.status === "needs_changes" ? b.files.filter((f) => f.status === "rejected").map((f) => ({ kind: fileRows.find((r) => r.id === f.id)?.kind || "", note: f.note })) : [];
+  if (owner) await mailReviewed(app, owner.email, b.status, b.adminNote, rejectedDocs);
   return { ok: true };
 });

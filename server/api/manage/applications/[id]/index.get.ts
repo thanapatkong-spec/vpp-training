@@ -1,5 +1,6 @@
 import { eq } from "drizzle-orm";
-import { applicationFiles, applications, user } from "../../../../db/schema";
+import { desc } from "drizzle-orm";
+import { applicationFiles, applications, payments, user } from "../../../../db/schema";
 
 // แอดมิน: รายละเอียดใบสมัคร + รายการเอกสาร
 export default defineEventHandler(async (event) => {
@@ -12,5 +13,8 @@ export default defineEventHandler(async (event) => {
     .select({ id: applicationFiles.id, kind: applicationFiles.kind, name: applicationFiles.name, contentType: applicationFiles.contentType, size: applicationFiles.size, status: applicationFiles.status, note: applicationFiles.note })
     .from(applicationFiles)
     .where(eq(applicationFiles.applicationId, id));
-  return { ...app.app, email: app.email, files };
+  const pays = await db
+    .select({ id: payments.id, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, verifiedBy: payments.verifiedBy, createdAt: payments.createdAt, paidAt: payments.paidAt, hasSlip: payments.slipType })
+    .from(payments).where(eq(payments.applicationId, id)).orderBy(desc(payments.createdAt));
+  return { ...app.app, email: app.email, files, payments: pays, amount: priceOf(app.app.packageId) };
 });
