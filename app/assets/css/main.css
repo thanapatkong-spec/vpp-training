@@ -78,3 +78,13 @@ textarea.field { border-radius: 1.25rem; }
   background: #fff;
   box-shadow: 0 8px 24px rgb(15 52 96 / 0.15);
 }
+
+/* รูป hero ให้กลืนไปกับพื้นหลัง (ขอบจางหาย ไม่มีกรอบ) */
+.hero-photo {
+  -webkit-mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent),
+    linear-gradient(to bottom, transparent, #000 12%, #000 80%, transparent);
+  -webkit-mask-composite: source-in;
+  mask-image: linear-gradient(to right, transparent, #000 14%, #000 86%, transparent),
+    linear-gradient(to bottom, transparent, #000 12%, #000 80%, transparent);
+  mask-composite: intersect;
+}
