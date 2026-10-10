@@ -42,27 +42,13 @@ async function toggleCerts(m: Member) {
   Object.assign(pf, { name: m.name, email: m.placeholder ? "" : m.email, phone: m.phone || "", cohort: m.cohort || "", msg: "", ok: false });
   link.value = null;
   linkMsg.value = "";
+  saveMsg.value = null;
   certs.value = [];
   await loadCerts(m.id);
 }
 function onPickAttach(f: File) {
-  cf.err = "";
+  saveMsg.value = null;
   if (!cf.title.trim()) cf.title = f.name.replace(/\.[^.]+$/, ""); // เติมชื่อไฟล์ให้ก่อน แก้ได้
-}
-async function saveProfile(m: Member) {
-  pf.msg = "";
-  pf.busy = true;
-  try {
-    await $fetch(`/api/manage/members/${m.id}`, { method: "PATCH", body: { name: pf.name, email: pf.email || undefined, phone: pf.phone, cohort: pf.cohort }, headers: authHeaders() });
-    pf.ok = true;
-    pf.msg = "บันทึกโปรไฟล์แล้ว";
-    await loadMembers();
-  } catch (e: any) {
-    pf.ok = false;
-    pf.msg = e?.data?.message || "บันทึกไม่สำเร็จ";
-  } finally {
-    pf.busy = false;
-  }
 }
 async function makeLink(m: Member) {
   linkMsg.value = "";
@@ -97,26 +83,49 @@ async function loadCerts(id: string) {
     certs.value = await $fetch<Cert[]>(`/api/manage/members/${id}/certificates`, { headers: authHeaders() });
   } catch {}
 }
-async function issueCert(m: Member) {
-  cf.err = cf.ok = "";
-  if (!cf.file) return (cf.err = "กรุณากดปุ่ม \"แนบไฟล์\" แล้วเลือกไฟล์ก่อน");
-  if (!cf.title.trim()) return (cf.err = "กรุณาใส่ชื่อไฟล์");
-  const fd = new FormData();
-  fd.append("file", cf.file);
-  if (cf.title) fd.append("title", cf.title);
-  if (cf.certNo) fd.append("certNo", cf.certNo);
-  if (cf.issuedOn) fd.append("issuedOn", cf.issuedOn);
-  cf.busy = true;
+// บันทึกทั้งกล่อง: โปรไฟล์ (ถ้ามีการแก้) + ไฟล์แนบใหม่ (ถ้าเลือกไว้)
+const saving = ref(false);
+const saveMsg = ref<{ ok: boolean; text: string } | null>(null);
+async function saveAll(m: Member) {
+  saveMsg.value = null;
+  if (!pf.name.trim()) return (saveMsg.value = { ok: false, text: "กรุณาใส่ชื่อ-สกุล" });
+  if (cf.file && !cf.title.trim()) return (saveMsg.value = { ok: false, text: "กรุณาใส่ชื่อไฟล์ที่แสดงของไฟล์ที่แนบ" });
+  const profileChanged = pf.name !== m.name || pf.email !== (m.placeholder ? "" : m.email) || pf.phone !== (m.phone || "") || pf.cohort !== (m.cohort || "");
+  if (!profileChanged && !cf.file) return (saveMsg.value = { ok: true, text: "ไม่มีอะไรเปลี่ยน" });
+  saving.value = true;
+  const done: string[] = [];
   try {
-    await $fetch(`/api/manage/members/${m.id}/certificates`, { method: "POST", body: fd, headers: authHeaders() });
-    cf.ok = "แนบไฟล์ให้สมาชิกแล้ว สมาชิกดาวน์โหลดได้ที่หน้าบัญชีของฉัน";
-    Object.assign(cf, { file: undefined, title: "", certNo: "", issuedOn: "" });
+    if (profileChanged) {
+      await $fetch(`/api/manage/members/${m.id}`, { method: "PATCH", body: { name: pf.name, email: pf.email || undefined, phone: pf.phone, cohort: pf.cohort }, headers: authHeaders() });
+      done.push("โปรไฟล์");
+    }
+    if (cf.file) {
+      const fd = new FormData();
+      fd.append("file", cf.file);
+      fd.append("title", cf.title.trim());
+      if (cf.certNo) fd.append("certNo", cf.certNo);
+      if (cf.issuedOn) fd.append("issuedOn", cf.issuedOn);
+      try {
+        await $fetch(`/api/manage/members/${m.id}/certificates`, { method: "POST", body: fd, headers: authHeaders() });
+      } catch (e: any) {
+        throw new Error(`${done.length ? "บันทึกโปรไฟล์แล้ว แต่" : ""}${uploadError(e, "แนบไฟล์ไม่สำเร็จ")}`);
+      }
+      Object.assign(cf, { file: undefined, title: "", certNo: "", issuedOn: "" });
+      done.push("ไฟล์แนบ");
+    }
+    saveMsg.value = { ok: true, text: `บันทึก${done.join(" และ ")}แล้ว` };
     await Promise.all([loadCerts(m.id), loadMembers()]);
   } catch (e: any) {
-    cf.err = uploadError(e, "แนบไฟล์ไม่สำเร็จ");
+    saveMsg.value = { ok: false, text: e?.data?.message || e?.message || "บันทึกไม่สำเร็จ" };
+    if (done.length) loadMembers();
   } finally {
-    cf.busy = false;
+    saving.value = false;
   }
+}
+function cancelEdit() {
+  openId.value = "";
+  saveMsg.value = null;
+  Object.assign(cf, { file: undefined, title: "", certNo: "", issuedOn: "" });
 }
 async function removeCert(m: Member, c: Cert) {
   if (!confirm(`ลบไฟล์ "${c.title}" ของ ${m.name} ?`)) return;
@@ -280,7 +289,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
       </form>
     </div>
     <nav v-if="!forbidden" class="mt-6 flex flex-wrap gap-2 text-sm font-semibold">
-      <button v-for="t in ([['members', 'สมาชิกและใบประกาศ'], ['claims', `คำขอใบประกาศ${rows.some((r) => r.status === 'pending') ? ` (${rows.filter((r) => r.status === 'pending').length})` : ''}`], ['content', 'เนื้อหาเว็บ']] as const)" :key="t[0]"
+      <button v-for="t in ([['members', 'สมาชิกและใบประกาศ'], ...(rows.length ? [['claims', `คำขอเดิมจากสมาชิก${rows.some((r) => r.status === 'pending') ? ` (${rows.filter((r) => r.status === 'pending').length})` : ''}`]] : []), ['content', 'เนื้อหาเว็บ']] as const)" :key="t[0]"
         class="rounded-full px-5 py-2" :class="tab === t[0] ? 'bg-navy-800 text-white' : 'bg-white text-navy-800 shadow-sm'" @click="tab = t[0]">{{ t[1] }}</button>
     </nav>
 
@@ -323,6 +332,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         <Paperclip class="size-4" />เลือกไฟล์ Excel (.xlsx)
         <input type="file" accept=".xlsx" class="hidden" @change="pickExcel" />
       </label>
+      <a :href="asset('/downloads/vpp-members-template.xlsx')" download class="ml-3 text-sm text-navy-800 underline">ดาวน์โหลดแบบฟอร์ม Excel</a>
       <p v-if="impMsg" class="mt-2 text-sm text-slate-600">{{ impMsg }}</p>
       <div v-if="impRows.length" class="mt-3 flex gap-2">
         <button :disabled="impBusy" class="rounded-full border border-navy-800 px-5 py-2 text-sm text-navy-800 disabled:opacity-60" @click="runImport(true)">ตรวจสอบก่อน (ยังไม่สร้าง)</button>
@@ -378,8 +388,6 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
                       <input v-model="pf.phone" class="field" placeholder="เบอร์โทรศัพท์" />
                       <input v-model="pf.cohort" class="field" placeholder="รุ่น เช่น รุ่นที่ 3" />
                     </div>
-                    <p v-if="pf.msg" class="mt-2 text-sm" :class="pf.ok ? 'text-green-700' : 'text-red-700'">{{ pf.msg }}</p>
-                    <button :disabled="pf.busy" class="btn-brand mt-2 px-5 py-2 text-sm disabled:opacity-60" @click="saveProfile(m)">บันทึกโปรไฟล์</button>
                   </div>
 
                   <div v-if="!m.admin">
@@ -405,18 +413,21 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
                     </ul>
                     <p v-else class="mt-1 text-xs text-slate-500">ยังไม่มีไฟล์</p>
                     <div class="mt-3 grid gap-2 md:grid-cols-2">
-                      <div class="text-xs text-slate-600">แนบไฟล์ (PDF / JPG / PNG ไม่เกิน 4MB) *
+                      <div class="text-xs text-slate-600">แนบไฟล์ใหม่ (PDF / JPG / PNG ไม่เกิน 4MB) · ไม่บังคับ
                         <FilePickButton v-model="cf.file" class="mt-1" @picked="onPickAttach" />
                       </div>
-                      <label class="text-xs text-slate-600">ชื่อไฟล์ที่แสดง *
+                      <label class="text-xs text-slate-600">ชื่อไฟล์ที่แสดง (ต้องใส่เมื่อแนบไฟล์)
                         <input v-model="cf.title" class="field mt-1" placeholder="เช่น ประกาศนียบัตร VPP รุ่นที่ 3" />
                       </label>
                       <input v-model="cf.certNo" class="field" placeholder="เลขที่ (ถ้ามี)" />
                       <label class="text-xs text-slate-600">วันที่ออก <input v-model="cf.issuedOn" type="date" class="field mt-1" /></label>
                     </div>
-                    <p v-if="cf.err" class="mt-2 text-sm text-red-700">{{ cf.err }}</p>
-                    <p v-if="cf.ok" class="mt-2 text-sm text-green-700">{{ cf.ok }}</p>
-                    <button :disabled="cf.busy" class="btn-brand mt-3 px-5 py-2 text-sm disabled:opacity-60" @click="issueCert(m)">แนบไฟล์ให้สมาชิกคนนี้</button>
+                  </div>
+
+                  <div class="sticky bottom-0 -mx-4 -mb-4 flex flex-wrap items-center gap-3 border-t border-sky-card bg-sky-soft/95 px-4 py-3 backdrop-blur">
+                    <button :disabled="saving" class="btn-brand px-6 py-2.5 text-sm disabled:opacity-60" @click="saveAll(m)">{{ saving ? "กำลังบันทึก..." : "บันทึก" }}</button>
+                    <button :disabled="saving" class="rounded-full border border-slate-300 bg-white px-6 py-2.5 text-sm text-navy-800 disabled:opacity-60" @click="cancelEdit">ยกเลิก</button>
+                    <p v-if="saveMsg" class="text-sm" :class="saveMsg.ok ? 'text-green-700' : 'text-red-700'">{{ saveMsg.text }}</p>
                   </div>
                 </td>
               </tr>
