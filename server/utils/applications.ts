@@ -37,7 +37,7 @@ export async function readApplicationForm(event: H3Event) {
     throw createError({ statusCode: 422, message: Object.values(fieldErrors)[0] || "ข้อมูลไม่ถูกต้อง", data: { fieldErrors } });
   }
   const { consent: _c, ...values } = parsed.data;
-  return { values: { ...values, nameEn: values.nameEn || null, lineId: values.lineId || null, school: values.school || null, position: values.position || null, vetPhone: values.vetPhone || null, invoiceName: values.invoiceName || null, invoiceAddress: values.invoiceAddress || null, invoiceTaxId: values.invoiceTaxId || null, experienceYears: values.experienceYears ?? null }, docs };
+  return { values: { ...values, birthDate: values.birthDate || null, address: values.address || null, lineId: values.lineId || null, school: values.school || null, position: values.position || null, workplace: values.workplace || null, invoiceName: values.invoiceName || null, invoiceAddress: values.invoiceAddress || null, invoiceTaxId: values.invoiceTaxId || null, experienceYears: values.experienceYears ?? null }, docs };
 }
 
 export const maskId = (id: string) => (id.length === 13 ? `${id.slice(0, 1)}-xxxx-xxxxx-${id.slice(10, 12)}-${id.slice(12)}` : "xxxx");

@@ -5,7 +5,7 @@ import { PACKAGES } from "#shared/config";
 const esc = (s: unknown) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
 const adminEmails = () => (process.env.ADMIN_EMAILS || "").split(",").map((e) => e.trim()).filter(Boolean);
 const site = () => (process.env.BETTER_AUTH_URL || "").replace(/\/$/, "");
-type App = { prefix: string; firstName: string; lastName: string; packageId: string; workplace?: string };
+type App = { prefix: string; firstName: string; lastName: string; packageId: string; workplace?: string | null };
 const fullName = (a: App) => `${a.prefix}${a.firstName} ${a.lastName}`;
 export const priceOf = (packageId: string) => PACKAGES.find((p) => p.id === packageId)?.price ?? 0;
 
@@ -21,7 +21,7 @@ export async function mailSubmitted(a: App, to: string, resubmit = false) {
     "ทีมงานได้รับใบสมัครและเอกสารของคุณแล้ว จะตรวจสอบและแจ้งผลทางอีเมลนี้",
   ], { url: `${site()}/apply`, label: "ดูสถานะใบสมัคร" });
   await sendMail({ to, subject: resubmit ? "ได้รับใบสมัครที่แก้ไขแล้ว · VPP" : "ได้รับใบสมัครเรียนแล้ว · VPP", ...m });
-  const n = layout(resubmit ? "ผู้สมัครส่งใบสมัครที่แก้ไขแล้ว" : "มีใบสมัครเรียนใหม่", [`${esc(fullName(a))} · ${esc(a.workplace)} · ${esc(PACKAGES.find((p) => p.id === a.packageId)?.short)}`, `อีเมลผู้สมัคร: ${esc(to)}`], { url: `${site()}/manage`, label: "เปิดหน้าตรวจใบสมัคร" });
+  const n = layout(resubmit ? "ผู้สมัครส่งใบสมัครที่แก้ไขแล้ว" : "มีใบสมัครเรียนใหม่", [`${esc(fullName(a))} · ${esc(a.workplace || "ไม่ระบุที่ทำงาน")} · ${esc(PACKAGES.find((p) => p.id === a.packageId)?.short)}`, `อีเมลผู้สมัคร: ${esc(to)}`], { url: `${site()}/manage`, label: "เปิดหน้าตรวจใบสมัคร" });
   await sendMail({ to: adminEmails(), subject: `${resubmit ? "ใบสมัครแก้ไขแล้ว" : "ใบสมัครใหม่"}: ${fullName(a)}`, ...n, replyTo: to });
 }
 

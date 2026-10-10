@@ -98,7 +98,7 @@ onMounted(load);
     <ul class="mt-4 divide-y divide-sky-card">
       <li v-for="r in shown" :key="r.id">
         <button class="flex w-full flex-wrap items-center justify-between gap-2 py-3 text-left" @click="toggle(r)">
-          <span><b class="text-navy-800">{{ r.prefix }}{{ r.firstName }} {{ r.lastName }}</b> <span class="text-xs text-slate-500">· {{ r.workplace }} · {{ pkgName(r.packageId) }} · {{ fmt(r.updatedAt) }}</span></span>
+          <span><b class="text-navy-800">{{ r.prefix }}{{ r.firstName }} {{ r.lastName }}</b> <span class="text-xs text-slate-500">· {{ r.workplace || "ไม่ระบุที่ทำงาน" }} · {{ pkgName(r.packageId) }} · {{ fmt(r.updatedAt) }}</span></span>
           <span class="flex gap-1">
             <span v-if="r.payStatus === 'paid'" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ชำระแล้ว</span>
             <span v-else-if="r.payStatus === 'pending'" class="rounded-full bg-amber-500 px-3 py-0.5 text-xs font-semibold text-white">สลิปรอตรวจ</span>
@@ -109,13 +109,12 @@ onMounted(load);
           <p v-if="!detail" class="text-slate-500">กำลังโหลด...</p>
           <template v-else>
             <dl class="grid gap-x-6 gap-y-2 md:grid-cols-2">
-              <div><dt class="text-xs text-slate-500">ชื่อ-นามสกุล</dt><dd>{{ detail.prefix }}{{ detail.firstName }} {{ detail.lastName }}<span v-if="detail.nameEn" class="text-slate-500"> ({{ detail.nameEn }})</span></dd></div>
-              <div><dt class="text-xs text-slate-500">เลขบัตรประชาชน / วันเกิด</dt><dd>{{ detail.nationalId }} · {{ fmt(detail.birthDate) }}</dd></div>
+              <div><dt class="text-xs text-slate-500">ชื่อ-นามสกุล</dt><dd>{{ detail.prefix }}{{ detail.firstName }} {{ detail.lastName }}</dd></div>
+              <div><dt class="text-xs text-slate-500">เลขบัตรประชาชน / วันเกิด</dt><dd>{{ detail.nationalId }} · {{ detail.birthDate ? fmt(detail.birthDate) : "-" }}</dd></div>
               <div><dt class="text-xs text-slate-500">ติดต่อ</dt><dd>{{ detail.phone }} · {{ detail.email }}<span v-if="detail.lineId"> · LINE {{ detail.lineId }}</span></dd></div>
-              <div><dt class="text-xs text-slate-500">ที่อยู่</dt><dd class="whitespace-pre-line">{{ detail.address }}</dd></div>
+              <div><dt class="text-xs text-slate-500">ที่อยู่</dt><dd class="whitespace-pre-line">{{ detail.address || "-" }}</dd></div>
               <div><dt class="text-xs text-slate-500">วุฒิการศึกษา</dt><dd>{{ detail.education }}<span v-if="detail.school"> · {{ detail.school }}</span></dd></div>
-              <div><dt class="text-xs text-slate-500">ที่ทำงาน</dt><dd>{{ detail.workplace }}<span v-if="detail.position"> · {{ detail.position }}</span><span v-if="detail.experienceYears != null"> · {{ detail.experienceYears }} ปี</span></dd></div>
-              <div><dt class="text-xs text-slate-500">สัตวแพทย์ผู้ควบคุม</dt><dd>{{ detail.vetName }} · ใบอนุญาต {{ detail.vetLicense }}<span v-if="detail.vetPhone"> · {{ detail.vetPhone }}</span></dd></div>
+              <div><dt class="text-xs text-slate-500">ที่ทำงาน</dt><dd>{{ detail.workplace || "-" }}<span v-if="detail.position"> · {{ detail.position }}</span><span v-if="detail.experienceYears != null"> · {{ detail.experienceYears }} ปี</span></dd></div>
               <div><dt class="text-xs text-slate-500">รุ่น / แพ็กเกจ / ผู้ชำระ</dt><dd>{{ detail.cohortId }} · {{ pkgName(detail.packageId) }} · {{ detail.payer === "employer" ? `นายจ้าง: ${detail.invoiceName}${detail.invoiceTaxId ? ` (${detail.invoiceTaxId})` : ""}` : "ชำระเอง" }}</dd></div>
             </dl>
             <p class="mt-4 font-semibold text-navy-800">เอกสาร</p>

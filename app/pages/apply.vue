@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CheckCircle2, Mail } from "lucide-vue-next";
-import { APP_DOCS, APP_STATUS, ApplicationInput, EDUCATION, PREFIXES, validThaiId, type AppDocKind } from "#shared/application";
+import { APP_DOCS, APP_STATUS, APPLY_PACKAGES, ApplicationInput, EDUCATION, PREFIXES, validThaiId, type AppDocKind } from "#shared/application";
 import { COHORT, PACKAGES, baht } from "#shared/config";
 
 useHead({ title: "สมัครเรียน VPP · VPP" });
@@ -16,8 +16,8 @@ const loaded = ref(false);
 
 const DRAFT_KEY = "vpp-apply-draft";
 const blank = () => ({
-  cohortId: COHORT.id, packageId: "bundle", prefix: "", firstName: "", lastName: "", nameEn: "", nationalId: "", birthDate: "", phone: "", lineId: "", address: "",
-  education: "", school: "", workplace: "", position: "", experienceYears: "" as string | number, vetName: "", vetLicense: "", vetPhone: "",
+  cohortId: COHORT.id, packageId: "bundle", prefix: "", firstName: "", lastName: "", nationalId: "", birthDate: "", phone: "", lineId: "", address: "",
+  education: "", school: "", workplace: "", position: "", experienceYears: "" as string | number,
   payer: "self", invoiceName: "", invoiceAddress: "", invoiceTaxId: "", consent: false,
 });
 const f = reactive(blank());
@@ -30,8 +30,8 @@ const done = ref(false);
 
 const STEPS = ["ข้อมูลส่วนตัว", "การศึกษาและที่ทำงาน", "รุ่นและแพ็กเกจ", "เอกสาร", "ตรวจทานและส่ง"];
 const STEP_FIELDS: string[][] = [
-  ["prefix", "firstName", "lastName", "nameEn", "nationalId", "birthDate", "phone", "lineId", "address"],
-  ["education", "school", "workplace", "position", "experienceYears", "vetName", "vetLicense", "vetPhone"],
+  ["prefix", "firstName", "lastName", "nationalId", "birthDate", "phone", "lineId", "address"],
+  ["education", "school", "workplace", "position", "experienceYears"],
   ["cohortId", "packageId", "payer", "invoiceName", "invoiceAddress", "invoiceTaxId"],
   [],
   ["consent"],
@@ -98,21 +98,11 @@ function go(n: number) {
   if (n < step.value) step.value = n;
 }
 
-// ย่อรูปจากมือถือก่อนส่ง (ให้ไฟล์รวมไม่เกิน 4MB)
-async function shrink(file: File): Promise<File> {
-  if (!/^image\/(jpeg|png)$/.test(file.type) || file.size < 900 * 1024) return file;
-  const img = await createImageBitmap(file);
-  const scale = Math.min(1, 1800 / Math.max(img.width, img.height));
-  const c = document.createElement("canvas");
-  c.width = Math.round(img.width * scale);
-  c.height = Math.round(img.height * scale);
-  c.getContext("2d")!.drawImage(img, 0, 0, c.width, c.height);
-  const blob: Blob = await new Promise((res) => c.toBlob((b) => res(b!), "image/jpeg", 0.85));
-  return new File([blob], file.name.replace(/\.\w+$/, ".jpg"), { type: "image/jpeg" });
-}
+const shrinking = ref<Partial<Record<string, boolean>>>({});
 async function pickDoc(kind: AppDocKind, file: File | undefined) {
   if (!file) return (files[kind] = undefined);
-  files[kind] = await shrink(file);
+  shrinking.value[kind] = true;
+  try { files[kind] = await shrinkForUpload(file); } finally { shrinking.value[kind] = false; }
   delete errors.value[kind];
 }
 const totalSize = computed(() => Object.values(files).reduce((s, x) => s + (x?.size || 0), 0));
@@ -125,7 +115,11 @@ async function submit() {
       return;
     }
   }
-  if (totalSize.value > 4 * 1024 * 1024) return (formError.value = "ไฟล์รวมกันใหญ่เกิน 4MB กรุณาสแกนหรือถ่ายรูปความละเอียดต่ำลง");
+  if (totalSize.value > 4 * 1024 * 1024) {
+    // ยังใหญ่เกิน: ย่อทุกไฟล์ลงอีกขั้นอัตโนมัติ
+    for (const d of APP_DOCS) if (files[d.kind]) files[d.kind] = await shrinkForUpload(files[d.kind]!, 900 * 1024);
+    if (totalSize.value > 4 * 1024 * 1024) return (formError.value = "ไฟล์ใหญ่มาก ระบบย่อให้แล้วแต่ยังเกินที่ส่งได้ กรุณาแนบไฟล์ที่มีจำนวนหน้าน้อยลง หรือติดต่อทีมงาน");
+  }
   const fd = new FormData();
   fd.append("data", JSON.stringify({ ...f, experienceYears: f.experienceYears === "" ? undefined : f.experienceYears }));
   for (const d of APP_DOCS) if (files[d.kind]) fd.append(d.kind, files[d.kind]!);
@@ -150,6 +144,7 @@ async function submit() {
 }
 
 const pkg = computed(() => PACKAGES.find((p) => p.id === f.packageId));
+const applyPackages = APPLY_PACKAGES.map((id) => PACKAGES.find((p) => p.id === id)!);
 
 // ---- ชำระค่าเรียน (พร้อมเพย์ + สลิป) ----
 const qrSrc = ref("");
@@ -165,7 +160,7 @@ async function sendSlip() {
   payMsg.value = null;
   if (!slip.value) return (payMsg.value = { ok: false, text: "กรุณากดปุ่ม \"แนบสลิป\" แล้วเลือกรูปสลิป" });
   const fd = new FormData();
-  fd.append("slip", await shrink(slip.value));
+  fd.append("slip", await shrinkImage(slip.value, 2 * 1024 * 1024));
   paying.value = true;
   try {
     const r = await $fetch<{ status: string }>("/api/me/payment", { method: "POST", body: fd });
@@ -228,7 +223,7 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
               <p>ชื่อบัญชี: <b>{{ existing.payment.promptpay.name }}</b></p>
               <p>ยอดชำระ: <b>{{ baht(existing.payment.amount) }} บาท</b> (ยอดอยู่ใน QR แล้ว)</p>
               <p class="mt-3 text-xs text-slate-500">โอนแล้ว บันทึกภาพสลิปจากแอปธนาคาร แล้วแนบด้านล่าง{{ existing.payment.autoCheck ? " ระบบตรวจสลิปและยืนยันให้ทันที" : " ทีมงานจะตรวจและยืนยันทางอีเมล" }}</p>
-              <FilePickButton v-model="slip" label="แนบสลิป" accept="image/jpeg,image/png" :max-mb="10" class="mt-2" />
+              <FilePickButton v-model="slip" label="แนบสลิป" accept="image/jpeg,image/png" :max-mb="500" class="mt-2" />
               <button :disabled="paying" class="btn-brand mt-3 px-6 py-2.5 text-sm disabled:opacity-60" @click="sendSlip">{{ paying ? "กำลังตรวจสลิป..." : "ส่งสลิป" }}</button>
             </div>
           </div>
@@ -269,14 +264,13 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
             <span v-if="errors.prefix" class="err">{{ errors.prefix }}</span>
           </label>
           <span class="hidden md:block" />
-          <label class="text-xs text-slate-600">ชื่อ (ภาษาไทย) *<input v-model="f.firstName" class="field mt-1" /><span v-if="errors.firstName" class="err">{{ errors.firstName }}</span></label>
-          <label class="text-xs text-slate-600">นามสกุล (ภาษาไทย) *<input v-model="f.lastName" class="field mt-1" /><span v-if="errors.lastName" class="err">{{ errors.lastName }}</span></label>
-          <label class="text-xs text-slate-600 md:col-span-2">ชื่อ-นามสกุล ภาษาอังกฤษ (สำหรับใบประกาศ)<input v-model="f.nameEn" class="field mt-1" placeholder="เช่น Miss Somsri Jaidee" /></label>
+          <label class="text-xs text-slate-600">ชื่อ *<input v-model="f.firstName" class="field mt-1" /><span v-if="errors.firstName" class="err">{{ errors.firstName }}</span></label>
+          <label class="text-xs text-slate-600">นามสกุล *<input v-model="f.lastName" class="field mt-1" /><span v-if="errors.lastName" class="err">{{ errors.lastName }}</span></label>
           <label class="text-xs text-slate-600">เลขบัตรประชาชน 13 หลัก *<input v-model="f.nationalId" inputmode="numeric" maxlength="17" class="field mt-1" autocomplete="off" /><span v-if="errors.nationalId || idHint" class="err">{{ errors.nationalId || idHint }}</span></label>
-          <label class="text-xs text-slate-600">วันเกิด *<input v-model="f.birthDate" type="date" class="field mt-1" /><span v-if="errors.birthDate" class="err">{{ errors.birthDate }}</span></label>
+          <label class="text-xs text-slate-600">วันเกิด<input v-model="f.birthDate" type="date" class="field mt-1" /><span v-if="errors.birthDate" class="err">{{ errors.birthDate }}</span></label>
           <label class="text-xs text-slate-600">เบอร์โทรศัพท์ *<input v-model="f.phone" inputmode="tel" class="field mt-1" placeholder="08x-xxx-xxxx" /><span v-if="errors.phone" class="err">{{ errors.phone }}</span></label>
           <label class="text-xs text-slate-600">LINE ID<input v-model="f.lineId" class="field mt-1" /></label>
-          <label class="text-xs text-slate-600 md:col-span-2">ที่อยู่ที่ติดต่อได้ *<textarea v-model="f.address" rows="3" class="field mt-1" /><span v-if="errors.address" class="err">{{ errors.address }}</span></label>
+          <label class="text-xs text-slate-600 md:col-span-2">ที่อยู่ที่ติดต่อได้<textarea v-model="f.address" rows="3" class="field mt-1" /><span v-if="errors.address" class="err">{{ errors.address }}</span></label>
           <p class="text-xs text-slate-500 md:col-span-2">อีเมลติดต่อ: {{ session?.user.email }}</p>
         </div>
 
@@ -287,14 +281,10 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
             <span v-if="errors.education" class="err">{{ errors.education }}</span>
           </label>
           <label class="text-xs text-slate-600">สถานศึกษา<input v-model="f.school" class="field mt-1" /></label>
-          <label class="text-xs text-slate-600">สถานที่ทำงาน (โรงพยาบาลสัตว์/คลินิก) *<input v-model="f.workplace" class="field mt-1" /><span v-if="errors.workplace" class="err">{{ errors.workplace }}</span></label>
+          <label class="text-xs text-slate-600">สถานที่ทำงาน (โรงพยาบาลสัตว์/คลินิก)<input v-model="f.workplace" class="field mt-1" /><span v-if="errors.workplace" class="err">{{ errors.workplace }}</span></label>
           <label class="text-xs text-slate-600">ตำแหน่ง<input v-model="f.position" class="field mt-1" /></label>
-          <label class="text-xs text-slate-600">ประสบการณ์ทำงาน (ปี)<input v-model="f.experienceYears" type="number" min="0" class="field mt-1 max-w-[8rem]" /></label>
+          <label class="text-xs text-slate-600">ประสบการณ์ทำงาน (ปี)<input v-model="f.experienceYears" type="number" min="0" class="field mt-1 block max-w-[8rem]" /></label>
           <span class="hidden md:block" />
-          <p class="text-sm font-semibold text-navy-800 md:col-span-2">สัตวแพทย์ผู้ควบคุม (ผู้ประกอบวิชาชีพการสัตวแพทย์ชั้นหนึ่ง)</p>
-          <label class="text-xs text-slate-600">ชื่อ-นามสกุล *<input v-model="f.vetName" class="field mt-1" /><span v-if="errors.vetName" class="err">{{ errors.vetName }}</span></label>
-          <label class="text-xs text-slate-600">เลขที่ใบอนุญาต *<input v-model="f.vetLicense" class="field mt-1" /><span v-if="errors.vetLicense" class="err">{{ errors.vetLicense }}</span></label>
-          <label class="text-xs text-slate-600">เบอร์โทร<input v-model="f.vetPhone" inputmode="tel" class="field mt-1" /></label>
         </div>
 
         <!-- 3 -->
@@ -308,13 +298,15 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
           </div>
           <div>
             <p class="text-xs text-slate-600">แพ็กเกจ *</p>
-            <div class="mt-1 grid gap-2 md:grid-cols-3">
-              <label v-for="p in PACKAGES" :key="p.id" class="flex cursor-pointer flex-col rounded-2xl border-2 px-4 py-3 text-sm" :class="f.packageId === p.id ? 'border-brand bg-orange-50' : 'border-sky-card'">
+            <div class="mt-1 grid gap-2 md:grid-cols-2">
+              <label v-for="p in applyPackages" :key="p.id" class="flex cursor-pointer flex-col rounded-2xl border-2 px-4 py-3 text-sm" :class="f.packageId === p.id ? 'border-brand bg-orange-50' : 'border-sky-card'">
                 <span class="flex items-center gap-2"><input v-model="f.packageId" type="radio" :value="p.id" /><b class="text-navy-800">{{ p.short }}</b></span>
                 <span class="mt-1 text-xs text-slate-500">{{ p.sub }}</span>
                 <span class="mt-1 font-semibold text-brand">{{ baht(p.price) }} บาท</span>
               </label>
             </div>
+            <p class="mt-2 rounded-2xl bg-sky-soft px-4 py-2 text-xs text-navy-800"><b>ใบประกาศนียบัตรสำหรับนำไปขึ้นทะเบียนกับสัตวแพทยสภา ต้องเรียนและสอบผ่านทั้ง 2 ภาค</b> (ทฤษฎี + ปฏิบัติ) · ภาคปฏิบัติสมัครอย่างเดียวไม่ได้</p>
+            <p v-if="f.packageId === 'theory'" class="mt-2 rounded-2xl bg-amber-50 px-4 py-2 text-xs text-amber-800">เลือกเฉพาะภาคทฤษฎี: ยังนำใบประกาศไปขึ้นทะเบียนไม่ได้จนกว่าจะเรียนภาคปฏิบัติครบ</p>
             <p class="mt-1 text-xs text-slate-500">ราคานี้เป็นค่าเรียน (ชำระให้ Dr.John) ไม่รวมค่าตรวจสอบคุณสมบัติที่ชำระให้สัตวแพทยสภา</p>
           </div>
           <div>
@@ -333,15 +325,16 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
 
         <!-- 4 -->
         <div v-show="step === 4" class="space-y-5">
-          <p class="text-sm text-slate-600">แนบไฟล์ PDF, JPG หรือ PNG (ถ่ายรูปจากมือถือได้ ระบบย่อขนาดให้อัตโนมัติ) รวมกันไม่เกิน 4MB</p>
+          <p class="text-sm text-slate-600">แนบไฟล์ PDF หรือรูปภาพ (ถ่ายจากมือถือได้) ไฟล์ใหญ่แค่ไหนก็ได้ ระบบย่อขนาดให้อัตโนมัติ</p>
           <div v-for="d in APP_DOCS" :key="d.kind" class="rounded-2xl border border-sky-card p-4">
             <p class="text-sm font-semibold text-navy-800">{{ d.label }} <span v-if="needsFile(d.kind)" class="text-red-600">*</span></p>
             <p v-if="fileState(d.kind)?.status === 'rejected'" class="mt-1 text-xs text-red-700">เอกสารนี้ไม่ผ่าน{{ fileState(d.kind)?.note ? `: ${fileState(d.kind)?.note}` : "" }} กรุณาแนบใหม่</p>
             <p v-else-if="fileState(d.kind)" class="mt-1 text-xs text-green-700">ส่งแล้ว ({{ fileState(d.kind)?.name }}) แนบใหม่ได้ถ้าต้องการเปลี่ยน</p>
-            <FilePickButton :model-value="files[d.kind]" class="mt-2" accept="application/pdf,image/jpeg,image/png" :max-mb="10" @update:model-value="pickDoc(d.kind, $event)" />
+            <FilePickButton :model-value="files[d.kind]" class="mt-2" accept="application/pdf,image/jpeg,image/png,image/heic,image/webp" :max-mb="500" @update:model-value="pickDoc(d.kind, $event)" />
+            <p v-if="shrinking[d.kind]" class="mt-1 text-xs text-slate-500">กำลังย่อขนาดไฟล์...</p>
             <span v-if="errors[d.kind]" class="err">{{ errors[d.kind] }}</span>
           </div>
-          <p class="text-xs text-slate-500">ขนาดรวม {{ (totalSize / 1024 / 1024).toFixed(1) }} MB / 4 MB</p>
+
         </div>
 
         <!-- 5 -->
@@ -350,8 +343,7 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
             <div><dt class="text-xs text-slate-500">ชื่อ-นามสกุล</dt><dd>{{ f.prefix }}{{ f.firstName }} {{ f.lastName }}</dd></div>
             <div><dt class="text-xs text-slate-500">เบอร์โทร</dt><dd>{{ f.phone }}</dd></div>
             <div><dt class="text-xs text-slate-500">วุฒิการศึกษา</dt><dd>{{ f.education }}</dd></div>
-            <div><dt class="text-xs text-slate-500">สถานที่ทำงาน</dt><dd>{{ f.workplace }}</dd></div>
-            <div><dt class="text-xs text-slate-500">สัตวแพทย์ผู้ควบคุม</dt><dd>{{ f.vetName }} ({{ f.vetLicense }})</dd></div>
+            <div><dt class="text-xs text-slate-500">สถานที่ทำงาน</dt><dd>{{ f.workplace || "-" }}</dd></div>
             <div><dt class="text-xs text-slate-500">แพ็กเกจ</dt><dd>{{ pkg?.short }}</dd></div>
             <div class="md:col-span-2"><dt class="text-xs text-slate-500">เอกสาร</dt><dd>{{ APP_DOCS.map((d) => `${d.label}: ${files[d.kind]?.name || (fileState(d.kind) && !needsFile(d.kind) ? "ใช้ไฟล์เดิม" : "-")}`).join(" · ") }}</dd></div>
           </dl>

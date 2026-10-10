@@ -6,7 +6,7 @@ import {
 import { CONTACT, COHORT, PACKAGES, baht } from "#shared/config";
 
 const lineUrl = `https://line.me/R/ti/p/${encodeURIComponent(CONTACT.line)}`;
-const mailUrl = `mailto:${CONTACT.email}?subject=${encodeURIComponent("สมัครเรียนหลักสูตรผู้ช่วยสัตวแพทย์ (VPP)")}&body=${encodeURIComponent("ชื่อ-นามสกุล:\nเบอร์โทร:\nแพ็กเกจที่สนใจ (ภาคทฤษฎี / ภาคปฏิบัติ / ครบ 2 ภาค):\nโรงพยาบาล/คลินิกที่สังกัด:")}`;
+const mailUrl = `mailto:${CONTACT.email}?subject=${encodeURIComponent("สมัครเรียนหลักสูตรผู้ช่วยสัตวแพทย์ (VPP)")}&body=${encodeURIComponent("ชื่อ-นามสกุล:\nเบอร์โทร:\nแพ็กเกจที่สนใจ (ภาคทฤษฎี / ครบ 2 ภาค):\nโรงพยาบาล/คลินิกที่สังกัด:")}`;
 
 const { data: latest } = await useAsyncData("latest-articles", () =>
   queryCollection("articles").order("date", "DESC").all().then((r) => r.filter((a) => !a.draft)),
@@ -127,6 +127,7 @@ const WHY = [
               <div class="mt-3 text-lg font-bold text-navy-800">{{ p.short }}</div>
               <div class="text-xs text-slate-500">{{ p.sub }}</div>
               <div class="mt-4 text-3xl font-bold text-navy-800">{{ baht(p.price) }} <span class="text-sm font-medium">บาท/คน</span></div>
+              <div v-if="p.id === 'practical'" class="mt-2 text-xs text-amber-700">ต้องเรียนคู่กับภาคทฤษฎี (สมัครอย่างเดียวไม่ได้)</div>
             </div>
           </template>
         </div>
