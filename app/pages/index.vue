@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import {
-  Award, CalendarDays, ChevronDown, Clock, FileText, GraduationCap, Hospital,
-  Laptop, Scale, ShieldCheck, Stethoscope, Users, AlertCircle, BookOpen, Download,
+  ArrowRight, Award, CalendarDays, ChevronDown, Clock, FileText, GraduationCap, Hospital,
+  HeartPulse, Laptop, PawPrint, Scale, Syringe, ShieldCheck, ShieldPlus, Stethoscope, Users, AlertCircle, BookOpen, Download,
 } from "lucide-vue-next";
 import { CONTACT, COHORT, PACKAGES, baht } from "#shared/config";
 
@@ -55,15 +55,17 @@ const WHY = [
             สร้างทีมที่มีพื้นฐาน ลดภาระการสอนงาน ยกระดับมาตรฐานโรงพยาบาลสัตว์ พร้อมเป็นส่วนหนึ่งของทีมอย่างมั่นใจ
           </p>
           <div class="mt-7 flex flex-wrap gap-3">
-            <a href="#contact" class="btn-brand px-6 py-3">สมัครเรียน / สอบถาม</a>
+            <a href="#contact" class="btn-brand inline-flex items-center gap-2 px-6 py-3">สมัครเรียน / สอบถาม <ArrowRight class="size-5" /></a>
             <a href="#cohorts" class="rounded-full border-2 border-navy-800 px-6 py-3 font-semibold text-navy-800 hover:bg-navy-800 hover:text-white">ดูตารางเรียน</a>
           </div>
         </div>
-        <div class="relative">
-          <!-- TODO: แทนด้วยรูปจริง public/hero.jpg -->
-          <div class="flex aspect-[4/3] items-center justify-center rounded-3xl bg-gradient-to-br from-sky-card to-white shadow-xl">
-            <Stethoscope class="size-24 text-navy-700/40" />
-          </div>
+        <div class="relative mx-auto w-full max-w-md md:max-w-none">
+          <div class="absolute -inset-4 -z-0 rounded-[3rem] bg-gradient-to-br from-sky-card via-sky-soft to-white" aria-hidden="true" />
+          <img :src="asset('/hero.jpg')" alt="ทีมสัตวแพทย์และผู้ช่วยสัตวแพทย์กำลังดูแลสุนัข" class="relative aspect-[4/4.2] w-full rounded-[2.5rem] object-cover shadow-xl" />
+          <span class="float-badge -left-5 top-8"><PawPrint class="size-7 text-navy-700" /></span>
+          <span class="float-badge -right-4 top-2"><ShieldPlus class="size-7 text-navy-700" /></span>
+          <span class="float-badge -right-6 top-1/3"><Syringe class="size-7 text-navy-700" /></span>
+          <span class="float-badge -right-3 top-[58%]"><HeartPulse class="size-7 text-navy-700" /></span>
           <div class="absolute -bottom-5 left-5 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-lg">
             <Award class="size-7 text-brand" />
             <div class="text-sm">
