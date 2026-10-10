@@ -14,9 +14,12 @@ export default defineEventHandler(async (event) => {
     if (p.name === "file") file = p;
     else if (p.name) f[p.name] = p.data.toString("utf8").trim();
   }
-  if (!file || !file.data.length) throw createError({ statusCode: 422, message: "กรุณาแนบไฟล์ PDF ใบประกาศ" });
+  if (!file || !file.data.length) throw createError({ statusCode: 422, message: "กรุณาแนบไฟล์" });
   if (file.data.length > MAX) throw createError({ statusCode: 422, message: "ไฟล์ต้องไม่เกิน 4MB" });
-  if (file.data.subarray(0, 5).toString("latin1") !== "%PDF-") throw createError({ statusCode: 422, message: "ไฟล์ต้องเป็น PDF" });
+  const head = file.data.subarray(0, 8);
+  const kind = head.subarray(0, 5).toString("latin1") === "%PDF-" ? "pdf" : head.subarray(0, 3).toString("hex") === "ffd8ff" ? "jpg" : head.toString("hex") === "89504e470d0a1a0a" ? "png" : "";
+  if (!kind) throw createError({ statusCode: 422, message: "แนบได้เฉพาะไฟล์ PDF, JPG หรือ PNG" });
+  if (!f.title) throw createError({ statusCode: 422, message: "กรุณาใส่ชื่อไฟล์" });
   if (f.issuedOn && !/^\d{4}-\d{2}-\d{2}$/.test(f.issuedOn)) throw createError({ statusCode: 422, message: "วันที่ออกใบไม่ถูกต้อง" });
 
   const db = useDb()!;
@@ -25,12 +28,12 @@ export default defineEventHandler(async (event) => {
   await db.transaction(async (tx) => {
     const [stored] = await tx
       .insert(certFiles)
-      .values({ name: file!.filename || "certificate.pdf", contentType: "application/pdf", size: file!.data.length, data: file!.data })
+      .values({ name: file!.filename || "certificate.pdf", contentType: kind === "pdf" ? "application/pdf" : kind === "jpg" ? "image/jpeg" : "image/png", size: file!.data.length, data: file!.data })
       .returning({ id: certFiles.id });
     if (!stored) throw createError({ statusCode: 500, message: "บันทึกไฟล์ไม่สำเร็จ" });
     await tx.insert(certificates).values({
       userId: id,
-      title: f.title || "ประกาศนียบัตรผู้ช่วยสัตวแพทย์ด้านการพยาบาลสัตว์",
+      title: f.title,
       certNo: f.certNo || null,
       issuedOn: f.issuedOn || null,
       fileId: stored.id,

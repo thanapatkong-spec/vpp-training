@@ -1,4 +1,4 @@
-import { inArray } from "drizzle-orm";
+import { and, eq, inArray } from "drizzle-orm";
 import { randomUUID } from "node:crypto";
 import { z } from "zod";
 import { memberProfiles, user } from "../../../db/schema";
@@ -9,7 +9,6 @@ const Body = z.object({
     .array(z.object({ name: z.string().trim().max(200), email: z.string().trim().max(320), phone: z.string().trim().max(40).optional(), cohort: z.string().trim().max(60).optional() }))
     .max(2000),
 });
-const EMAIL = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
 
 // แอดมิน: นำเข้าสมาชิกจากรายชื่อ (ชื่อ/อีเมล/เบอร์/รุ่น) สร้างบัญชีที่ยังไม่มีรหัสผ่าน
 export default defineEventHandler(async (event) => {
@@ -22,10 +21,20 @@ export default defineEventHandler(async (event) => {
   const skipped: { name: string; reason: string }[] = [];
   const seen = new Set<string>();
   const clean: { name: string; email: string; phone: string | null; cohort: string | null }[] = [];
+  let noEmail = 0;
   for (const r of rows) {
-    const email = r.email.toLowerCase();
-    if (!r.name) skipped.push({ name: r.email, reason: "ไม่มีชื่อ" });
-    else if (!EMAIL.test(email)) skipped.push({ name: r.name, reason: "อีเมลไม่ถูกต้อง/ไม่มี" });
+    const raw = r.email.toLowerCase();
+    if (!r.name) { skipped.push({ name: r.email || "(ไม่มีชื่อ)", reason: "ไม่มีชื่อ" }); continue; }
+    if (!raw) {
+      // ไม่มีอีเมล: สร้างบัญชีที่ยังไม่มีอีเมลจริง (แอดมินเติมอีเมลทีหลังได้) ข้ามถ้ามีชื่อ+รุ่นนี้อยู่แล้ว
+      const [dup] = await db.select({ id: user.id }).from(user).innerJoin(memberProfiles, eq(memberProfiles.userId, user.id))
+        .where(and(eq(user.name, r.name), eq(memberProfiles.cohort, r.cohort || ""))).limit(1);
+      if (dup) skipped.push({ name: r.name, reason: "มีชื่อนี้ในรุ่นเดียวกันอยู่แล้ว" });
+      else { noEmail++; clean.push({ name: r.name, email: newPlaceholderEmail(), phone: r.phone || null, cohort: r.cohort || null }); }
+      continue;
+    }
+    const email = raw;
+    if (!EMAIL_RE.test(email)) skipped.push({ name: r.name, reason: "อีเมลไม่ถูกต้อง" });
     else if (seen.has(email)) skipped.push({ name: r.name, reason: "อีเมลซ้ำในไฟล์" });
     else {
       seen.add(email);
@@ -51,5 +60,5 @@ export default defineEventHandler(async (event) => {
       }
     });
   }
-  return { dryRun, create: toCreate.length, skipped };
+  return { dryRun, create: toCreate.length, noEmail, skipped };
 });

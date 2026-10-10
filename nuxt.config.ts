@@ -35,5 +35,6 @@ export default defineNuxtConfig({
     "/reset-password": { ssr: false },
     "/account": { ssr: false },
     "/manage": { ssr: false },
+    "/activate": { ssr: false },
   },
 });

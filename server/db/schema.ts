@@ -132,5 +132,16 @@ export const memberProfiles = pgTable("member_profiles", {
   userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
   phone: text("phone"),
   cohort: text("cohort"),
+  imported: boolean("imported").notNull().default(true), // false = โปรไฟล์ที่สมาชิกสมัครเองแล้วแก้ข้อมูล
   importedAt: timestamp("imported_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// ลิงก์เปิดใช้งานบัญชีที่แอดมินสร้างไว้ให้ (เก็บเฉพาะค่าแฮชของ token)
+export const claimTokens = pgTable("claim_tokens", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  tokenHash: text("token_hash").notNull().unique(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  usedAt: timestamp("used_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
