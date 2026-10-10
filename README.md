@@ -28,6 +28,9 @@ npm run dev
 ## หน้าจัดการบทความ (CMS)
 เปิด `/admin/` บนเว็บ ล็อกอินด้วย GitHub token แล้วสร้าง/แก้บทความ อัปโหลดรูปและไฟล์ผ่านฟอร์มได้ — ดู `docs/cms-setup.md`
 
+## ระบบสมาชิก
+สมัคร (อีเมล/Google) → ยื่นคำขอ → แอดมินอนุมัติ → ดาวน์โหลดใบประกาศนียบัตร ต้อง deploy ที่ Vercel + Neon (ใช้บน GitHub Pages ไม่ได้) — ดู `docs/members-setup.md`
+
 ## โครงสร้าง
 - `app/pages/index.vue` หน้าข้อมูลหลักสูตร (ปุ่มสมัครเรียนส่งไป LINE@ / อีเมล)
 - `content/articles/*.md` บทความ/เนื้อหาอบรมแต่ละรุ่น (Nuxt Content — frontmatter: title, description, date, cohort, draft) · รูปไว้ใน `public/articles/`
