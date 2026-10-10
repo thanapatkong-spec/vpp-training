@@ -57,3 +57,15 @@
 - ไฟล์ถูกอ่านในเบราว์เซอร์ ส่งเฉพาะชื่อ/อีเมล/เบอร์/รุ่นไปที่ฐานข้อมูล ไม่เก็บไฟล์ และ **ห้ามนำไฟล์รายชื่อใส่ใน GitHub**
 - ข้ามแถวที่ไม่มีอีเมล อีเมลไม่ถูกต้อง หรือมีบัญชีอยู่แล้ว
 - บัญชีที่นำเข้ายังไม่มีรหัสผ่าน: เข้าสู่ระบบด้วย Google (อีเมลเดียวกัน) หรือใช้ "ลืมรหัสผ่าน" (ต้องตั้ง Resend)
+
+## แก้เนื้อหาเว็บในหน้าแอดมิน (แทน Sveltia CMS)
+`/manage` → แท็บ "เนื้อหาเว็บ": บทความ, คำถามที่พบบ่อย, เอกสารแนบ, อัลบั้มรูป, หน้าเนื้อหา (เกี่ยวกับ/ความร่วมมือ/นโยบาย) ใส่รูปและไฟล์ได้ กด "บันทึกและเผยแพร่" แล้วระบบ commit เข้า GitHub (main) เว็บจะอัปเดตเองใน 1–3 นาที
+
+ต้องตั้ง env `GITHUB_TOKEN` บน Vercel ก่อน (ทำครั้งเดียว):
+1. GitHub → Settings → Developer settings → Personal access tokens → **Fine-grained tokens** → Generate new token
+2. Repository access: **Only select repositories** → `vpp-training`
+3. Permissions → Repository permissions → **Contents: Read and write**
+4. Generate แล้วคัดลอก token ไปใส่ที่ Vercel → Environment Variables → `GITHUB_TOKEN` → Redeploy
+(ตัวเลือก: `GITHUB_REPO` ค่าเริ่มต้น `thanapatkong-spec/vpp-training`, `GITHUB_BRANCH` ค่าเริ่มต้น `main`)
+
+ไฟล์อัปโหลดไม่เกิน 3MB (jpg/png/webp/gif/pdf/docx/xlsx/pptx/zip) เก็บที่ `public/uploads/` หน้า `/admin/` (Sveltia) ยังใช้เป็นช่องทางสำรองได้

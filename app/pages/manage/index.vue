@@ -226,11 +226,8 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         class="rounded-full px-5 py-2" :class="tab === t[0] ? 'bg-navy-800 text-white' : 'bg-white text-navy-800 shadow-sm'" @click="tab = t[0]">{{ t[1] }}</button>
     </nav>
 
-    <section v-if="!forbidden && tab === 'content'" class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
-      <h2 class="text-xl font-bold text-navy-800">จัดการเนื้อหาเว็บ</h2>
-      <p class="mt-1 text-sm text-slate-600">แก้ไขบทความ คำถามที่พบบ่อย เอกสารแนบ หน้าเกี่ยวกับ/ความร่วมมือ และอัลบั้มรูป (เข้าสู่ระบบด้วย GitHub Token เดิม เมื่อบันทึกแล้วเว็บจะอัปเดตเอง)</p>
-      <a :href="asset('/admin/')" target="_blank" class="btn-brand mt-4 inline-block px-6 py-3 text-sm">เปิดหน้าจัดการเนื้อหา</a>
-    </section>
+    <CmsEditor v-if="!forbidden && tab === 'content'" :auth-headers="authHeaders" />
+    <p v-if="!forbidden && tab === 'content'" class="mt-6 text-xs text-slate-500">ต้องตั้งค่า <code>GITHUB_TOKEN</code> บน Vercel ก่อนใช้งาน (ดู docs/members-setup.md) · หน้าจัดการแบบเดิม (สำรอง): <a :href="asset('/admin/')" target="_blank" class="underline">/admin/</a></p>
 
     <p v-if="!forbidden && tab === 'claims' && loaded && !rows.length" class="mt-6 text-sm text-slate-500">ยังไม่มีคำขอ</p>
     <ul v-if="tab === 'claims'" class="mt-6 space-y-4">
