@@ -24,7 +24,34 @@ async function submitKey() {
   await load();
 }
 
+type Member = { id: string; name: string; email: string; phone: string | null; cohort: string | null };
+const members = ref<Member[]>([]);
+const q = ref("");
+const cohortFilter = ref("");
+const cohorts = computed(() => [...new Set(members.value.map((m) => m.cohort).filter(Boolean))].sort() as string[]);
+const shown = computed(() => {
+  const k = q.value.trim().toLowerCase();
+  return members.value.filter(
+    (m) => (!cohortFilter.value || m.cohort === cohortFilter.value) && (!k || [m.name, m.email, m.phone || ""].some((v) => v.toLowerCase().includes(k))),
+  );
+});
+async function loadMembers() {
+  try {
+    members.value = await $fetch<Member[]>("/api/manage/members", { headers: authHeaders() });
+  } catch {}
+}
+async function removeMember(m: Member) {
+  if (!confirm(`ลบสมาชิก ${m.name} (${m.email}) ?`)) return;
+  try {
+    await $fetch(`/api/manage/members/${m.id}`, { method: "DELETE", headers: authHeaders() });
+    members.value = members.value.filter((x) => x.id !== m.id);
+  } catch (e: any) {
+    alert(e?.data?.message || "ลบไม่สำเร็จ");
+  }
+}
+
 async function load() {
+  loadMembers();
   try {
     rows.value = await $fetch<Row[]>("/api/manage/claims", { headers: authHeaders() });
   } catch (e: any) {
@@ -121,7 +148,10 @@ async function runImport(dryRun: boolean) {
   impBusy.value = true;
   try {
     impResult.value = await $fetch("/api/manage/members/import", { method: "POST", body: { dryRun, rows: impRows.value }, headers: authHeaders() });
-    if (!dryRun) impRows.value = [];
+    if (!dryRun) {
+      impRows.value = [];
+      loadMembers();
+    }
   } catch (e: any) {
     impMsg.value = e?.data?.message || "นำเข้าไม่สำเร็จ";
   } finally {
@@ -188,6 +218,34 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         <ul class="mt-1 list-disc pl-5 text-slate-600">
           <li v-for="(k, i) in impResult.skipped" :key="i">{{ k.name }}: {{ k.reason }}</li>
         </ul>
+      </div>
+    </section>
+
+    <section v-if="!forbidden" class="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-bold text-navy-800">รายชื่อสมาชิกที่นำเข้า <span class="text-base font-normal text-slate-500">({{ shown.length }}/{{ members.length }} คน)</span></h2>
+      <div class="mt-3 flex flex-wrap gap-2">
+        <input v-model="q" class="field max-w-xs" placeholder="ค้นหาชื่อ / อีเมล / เบอร์" />
+        <select v-model="cohortFilter" class="field max-w-[10rem]">
+          <option value="">ทุกรุ่น</option>
+          <option v-for="c in cohorts" :key="c" :value="c">{{ c }}</option>
+        </select>
+      </div>
+      <p v-if="!members.length" class="mt-4 text-sm text-slate-500">ยังไม่มีสมาชิกที่นำเข้า</p>
+      <div v-else class="mt-4 overflow-x-auto">
+        <table class="w-full text-left text-sm">
+          <thead class="text-xs text-slate-500">
+            <tr><th class="py-2 pr-3">ชื่อ-สกุล</th><th class="pr-3">อีเมล</th><th class="pr-3">เบอร์โทร</th><th class="pr-3">รุ่น</th><th /></tr>
+          </thead>
+          <tbody>
+            <tr v-for="m in shown" :key="m.id" class="border-t border-sky-card">
+              <td class="py-2 pr-3 font-medium text-navy-800">{{ m.name }}</td>
+              <td class="pr-3">{{ m.email }}</td>
+              <td class="pr-3">{{ m.phone || "-" }}</td>
+              <td class="pr-3">{{ m.cohort || "-" }}</td>
+              <td class="text-right"><button class="text-xs text-red-600 hover:underline" @click="removeMember(m)">ลบ</button></td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     </section>
   </main>
