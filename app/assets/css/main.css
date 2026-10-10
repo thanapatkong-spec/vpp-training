@@ -60,3 +60,9 @@ body {
 
 /* โลโก้พันธมิตรในเนื้อหา (alt ขึ้นต้นด้วย "โลโก้") */
 .prose-vpp img[alt^="โลโก้"] { width: 8rem; height: 8rem; max-width: 100%; object-fit: contain; border-radius: 1rem; background: #fff; }
+
+/* ฟอร์มสมาชิก */
+.field { width: 100%; border-radius: 9999px; border: 1px solid #cbd5e1; background: #fff; padding: 0.7rem 1.25rem; font-size: 0.9rem; outline: none; }
+.field:focus { border-color: var(--color-brand); }
+textarea.field { border-radius: 1.25rem; }
+.auth-card { margin: 0 auto; width: 100%; max-width: 28rem; border-radius: 1.5rem; background: #fff; padding: 2rem; box-shadow: 0 10px 30px -12px rgb(15 39 66 / 0.25); }
