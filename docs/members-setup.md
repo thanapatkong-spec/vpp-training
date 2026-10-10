@@ -5,21 +5,13 @@
 > ระบบนี้ต้องมีเซิร์ฟเวอร์และฐานข้อมูล **ใช้บน GitHub Pages ไม่ได้** ต้อง deploy ที่ Vercel + Neon ตามด้านล่าง
 > บน GitHub Pages ลิงก์ "เข้าสู่ระบบ" จะถูกซ่อนไว้ (ปิดด้วย `NUXT_PUBLIC_MEMBERS_ENABLED=false`)
 
-## 1) ฐานข้อมูล (Neon)
-1. สร้างโปรเจกต์ที่ neon.tech (ฟรี) คัดลอก connection string (`postgres://…?sslmode=require`)
-2. สร้างตารางครั้งแรกจากเครื่องที่ clone repo:
-   ```bash
-   DATABASE_URL="<connection string>" npm run db:push
-   ```
-   (รันซ้ำทุกครั้งที่ `server/db/schema.ts` เปลี่ยน)
-
-## 2) Deploy ที่ Vercel
-1. vercel.com → Add New Project → เลือก repo `vpp-training` (Framework: Nuxt, ไม่ต้องแก้ build command)
-2. ตั้ง Environment Variables (ดูตัวอย่างใน `.env.example`)
+## 1) Deploy ที่ Vercel
+1. vercel.com → Add New → Project → Import `vpp-training` (Framework: Nuxt, **ไม่ต้องแก้ Build Command**)
+   - ถ้าไม่เห็น repo ให้ไปที่ GitHub → Settings → Applications → Vercel → Configure → Repository access แล้วเพิ่ม `vpp-training`
+2. ใส่ Environment Variables ก่อนกด Deploy
 
 | ตัวแปร | ค่า |
 |---|---|
-| `NUXT_DATABASE_URL` | connection string ของ Neon |
 | `BETTER_AUTH_SECRET` | สตริงสุ่มยาว ≥ 32 ตัวอักษร (เก็บเป็นความลับ) |
 | `BETTER_AUTH_URL` | URL จริงของเว็บ เช่น `https://vpp-training.vercel.app` |
 | `ADMIN_EMAILS` | อีเมลแอดมิน (คั่นด้วยจุลภาค) |
@@ -27,7 +19,13 @@
 | `RESEND_API_KEY`, `MAIL_FROM` | ดูข้อ 4 |
 | `NUXT_PUBLIC_GOOGLE_LOGIN`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | ดูข้อ 3 |
 
-3. กด Deploy แล้วเข้า `/signup` ทดสอบ เมื่อ Vercel พร้อมใช้งานแล้ว ปิด workflow GitHub Pages (`.github/workflows/pages.yml`) หรือชี้โดเมนไปที่ Vercel
+## 2) ฐานข้อมูล (Neon ผ่าน Vercel — ไม่ต้องรันคำสั่งเอง)
+1. ในโปรเจกต์บน Vercel → แท็บ **Storage** → Create Database → **Neon** (Marketplace) → Connect to project
+   - Vercel จะเพิ่ม `DATABASE_URL` ให้อัตโนมัติ (ระบบอ่านตัวแปรนี้เอง)
+2. กด **Redeploy** ตอน build สคริปต์ `scripts/vercel-build.mjs` จะ **สร้าง/อัปเดตตารางให้อัตโนมัติ** (`drizzle-kit push`) ถ้าไม่มี `DATABASE_URL` จะข้ามขั้นนี้
+- ใช้ Neon นอก Vercel ก็ได้: ตั้ง `DATABASE_URL` (หรือ `NUXT_DATABASE_URL`) เป็น connection string ของ Neon
+- สร้างตารางเองจากเครื่อง: `DATABASE_URL="<connection string>" npm run db:push`
+- ถ้าแก้ `server/db/schema.ts` แล้วการเปลี่ยนอาจทำให้ข้อมูลหาย `drizzle-kit push` จะหยุดและ build ล้ม ให้ตรวจก่อนแล้วค่อยดำเนินการ
 
 ## 3) ล็อกอินด้วย Google
 1. console.cloud.google.com → APIs & Services → Credentials → Create OAuth client ID (Web application)
