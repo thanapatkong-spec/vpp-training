@@ -45,12 +45,7 @@ async function toggleCerts(m: Member) {
   certs.value = [];
   await loadCerts(m.id);
 }
-function onPickAttach(e: Event) {
-  const input = e.target as HTMLInputElement;
-  const f = input.files?.[0];
-  input.value = "";
-  if (!f) return;
-  cf.file = f;
+function onPickAttach(f: File) {
   cf.err = "";
   if (!cf.title.trim()) cf.title = f.name.replace(/\.[^.]+$/, ""); // เติมชื่อไฟล์ให้ก่อน แก้ได้
 }
@@ -104,7 +99,7 @@ async function loadCerts(id: string) {
 }
 async function issueCert(m: Member) {
   cf.err = cf.ok = "";
-  if (!cf.file) return (cf.err = "กรุณาเลือกไฟล์ที่จะแนบ");
+  if (!cf.file) return (cf.err = "กรุณากดปุ่ม \"แนบไฟล์\" แล้วเลือกไฟล์ก่อน");
   if (!cf.title.trim()) return (cf.err = "กรุณาใส่ชื่อไฟล์");
   const fd = new FormData();
   fd.append("file", cf.file);
@@ -118,7 +113,7 @@ async function issueCert(m: Member) {
     Object.assign(cf, { file: undefined, title: "", certNo: "", issuedOn: "" });
     await Promise.all([loadCerts(m.id), loadMembers()]);
   } catch (e: any) {
-    cf.err = e?.data?.message || "แนบไฟล์ไม่สำเร็จ";
+    cf.err = uploadError(e, "แนบไฟล์ไม่สำเร็จ");
   } finally {
     cf.busy = false;
   }
@@ -183,7 +178,7 @@ const error = ref<Record<string, string>>({});
 async function approve(id: string) {
   error.value[id] = "";
   const file = files[id];
-  if (!file) return (error.value[id] = "กรุณาเลือกไฟล์ PDF ใบประกาศ");
+  if (!file) return (error.value[id] = "กรุณากดปุ่ม \"แนบไฟล์\" แล้วเลือกไฟล์ใบประกาศก่อน");
   busy.value = id;
   const fd = new FormData();
   fd.append("file", file);
@@ -194,7 +189,7 @@ async function approve(id: string) {
     await $fetch(`/api/manage/claims/${id}/approve`, { method: "POST", body: fd, headers: authHeaders() });
     await load();
   } catch (e: any) {
-    error.value[id] = e?.data?.message || "อนุมัติไม่สำเร็จ";
+    error.value[id] = uploadError(e, "อนุมัติไม่สำเร็จ");
   } finally {
     busy.value = "";
   }
@@ -266,6 +261,9 @@ async function runImport(dryRun: boolean) {
   }
 }
 
+const uploadError = (e: any, fallback: string) =>
+  e?.status === 413 || e?.statusCode === 413 ? "ไฟล์ใหญ่เกินที่ระบบรับได้ (ไม่เกิน 4MB) กรุณาย่อขนาดไฟล์" : e?.data?.message || `${fallback} (${e?.status || e?.statusCode || "เชื่อมต่อไม่ได้"})`;
+
 const status = { pending: ["รอตรวจสอบ", "bg-amber-100 text-amber-800"], approved: ["อนุมัติแล้ว", "bg-green-100 text-green-800"], rejected: ["ไม่อนุมัติ", "bg-red-100 text-red-700"] } as const;
 const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" }) : "-");
 </script>
@@ -301,9 +299,9 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         <p v-if="r.adminNote" class="mt-1 text-sm text-slate-600">หมายเหตุแอดมิน: {{ r.adminNote }}</p>
 
         <div v-if="r.status === 'pending'" class="mt-4 grid gap-3 border-t border-sky-card pt-4 md:grid-cols-2">
-          <label class="text-xs text-slate-600">ไฟล์ PDF ใบประกาศ (ไม่เกิน 4MB) *
-            <input type="file" accept="application/pdf" class="mt-1 block w-full text-sm" @change="files[r.id] = ($event.target as HTMLInputElement).files?.[0]" />
-          </label>
+          <div class="text-xs text-slate-600 md:col-span-2">ไฟล์ใบประกาศ (PDF / JPG / PNG ไม่เกิน 4MB) *
+            <FilePickButton v-model="files[r.id]" class="mt-1" />
+          </div>
           <input v-model="certNo[r.id]" class="field" placeholder="เลขที่ใบประกาศ (ถ้ามี)" />
           <label class="text-xs text-slate-600">วันที่ออกใบ
             <input v-model="issuedOn[r.id]" type="date" class="field mt-1" />
@@ -408,14 +406,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
                     <p v-else class="mt-1 text-xs text-slate-500">ยังไม่มีไฟล์</p>
                     <div class="mt-3 grid gap-2 md:grid-cols-2">
                       <div class="text-xs text-slate-600">แนบไฟล์ (PDF / JPG / PNG ไม่เกิน 4MB) *
-                        <div class="mt-1 flex flex-wrap items-center gap-3">
-                          <label class="inline-flex cursor-pointer items-center gap-2 rounded-full border-2 border-navy-800 bg-white px-5 py-2 text-sm font-semibold text-navy-800 hover:bg-navy-800 hover:text-white">
-                            <Paperclip class="size-4" />{{ cf.file ? "เปลี่ยนไฟล์" : "แนบไฟล์" }}
-                            <input type="file" accept="application/pdf,image/jpeg,image/png" class="hidden" @change="onPickAttach" />
-                          </label>
-                          <span class="text-sm" :class="cf.file ? 'font-medium text-navy-800' : 'text-slate-500'">{{ cf.file ? cf.file.name : "ยังไม่ได้เลือกไฟล์" }}</span>
-                          <button v-if="cf.file" type="button" class="text-xs text-red-600 hover:underline" @click="cf.file = undefined">เอาออก</button>
-                        </div>
+                        <FilePickButton v-model="cf.file" class="mt-1" @picked="onPickAttach" />
                       </div>
                       <label class="text-xs text-slate-600">ชื่อไฟล์ที่แสดง *
                         <input v-model="cf.title" class="field mt-1" placeholder="เช่น ประกาศนียบัตร VPP รุ่นที่ 3" />
