@@ -10,13 +10,13 @@ const isPending = computed(() => sessionState.value.isPending);
 type Claim = { id: string; fullName: string; cohort: string; completedOn: string | null; status: "pending" | "approved" | "rejected"; adminNote: string | null; createdAt: string };
 type Cert = { id: string; title: string; certNo: string | null; issuedOn: string | null };
 
-const me = ref<{ isAdmin: boolean } | null>(null);
+const me = ref<{ isAdmin: boolean; adminCandidate: boolean } | null>(null);
 const claims = ref<Claim[]>([]);
 const certs = ref<Cert[]>([]);
 
 async function load() {
   [me.value, claims.value, certs.value] = await Promise.all([
-    $fetch<{ isAdmin: boolean }>("/api/me"),
+    $fetch<{ isAdmin: boolean; adminCandidate: boolean }>("/api/me"),
     $fetch<Claim[]>("/api/me/claims"),
     $fetch<Cert[]>("/api/me/certificates"),
   ]);
@@ -70,7 +70,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         <p class="mt-1 text-sm text-slate-600">{{ session.user.name }} · {{ session.user.email }}</p>
       </div>
       <div class="flex gap-2">
-        <NuxtLink v-if="me?.isAdmin" to="/manage" class="rounded-full bg-navy-800 px-4 py-2 text-sm font-semibold text-white">จัดการคำขอ (แอดมิน)</NuxtLink>
+        <NuxtLink v-if="me?.isAdmin || me?.adminCandidate" to="/manage" class="rounded-full bg-navy-800 px-4 py-2 text-sm font-semibold text-white">จัดการคำขอ (แอดมิน)</NuxtLink>
         <button type="button" class="flex items-center gap-1 rounded-full border border-slate-300 px-4 py-2 text-sm text-navy-800" @click="signOut"><LogOut class="size-4" />ออกจากระบบ</button>
       </div>
     </div>
