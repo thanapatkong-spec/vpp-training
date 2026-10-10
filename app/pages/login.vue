@@ -2,6 +2,8 @@
 useHead({ title: "เข้าสู่ระบบ · VPP" });
 const config = useRuntimeConfig();
 const auth = useAuthClient();
+const nextQ = String(useRoute().query.next || "");
+const nextUrl = nextQ.startsWith("/") && !nextQ.startsWith("//") ? nextQ : "/account";
 
 const email = ref("");
 const password = ref("");
@@ -17,10 +19,10 @@ async function submit() {
     error.value = err.status === 403 ? "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ (ตรวจลิงก์ในอีเมลที่เราส่งให้)" : "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
     return;
   }
-  await navigateTo("/account");
+  await navigateTo(nextUrl);
 }
 
-const google = () => auth.signIn.social({ provider: "google", callbackURL: "/account" });
+const google = () => auth.signIn.social({ provider: "google", callbackURL: nextUrl });
 </script>
 
 <template>

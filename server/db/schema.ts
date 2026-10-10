@@ -145,3 +145,53 @@ export const claimTokens = pgTable("claim_tokens", {
   usedAt: timestamp("used_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// --- ใบสมัครเรียน VPP (ผู้สมัครต้องมีบัญชีสมาชิกก่อน) ---
+export const applicationStatus = pgEnum("application_status", ["submitted", "needs_changes", "approved", "rejected"]);
+export const applications = pgTable("applications", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: text("user_id").notNull().references(() => user.id, { onDelete: "cascade" }),
+  cohortId: text("cohort_id").notNull(),
+  packageId: packageEnum("package_id").notNull(),
+  prefix: text("prefix").notNull(),
+  firstName: text("first_name").notNull(),
+  lastName: text("last_name").notNull(),
+  nameEn: text("name_en"),
+  nationalId: text("national_id").notNull(),
+  birthDate: date("birth_date", { mode: "string" }).notNull(),
+  phone: text("phone").notNull(),
+  lineId: text("line_id"),
+  address: text("address").notNull(),
+  education: text("education").notNull(),
+  school: text("school"),
+  workplace: text("workplace").notNull(),
+  position: text("position"),
+  experienceYears: integer("experience_years"),
+  vetName: text("vet_name").notNull(),
+  vetLicense: text("vet_license").notNull(),
+  vetPhone: text("vet_phone"),
+  payer: text("payer").notNull().default("self"), // self | employer
+  invoiceName: text("invoice_name"),
+  invoiceAddress: text("invoice_address"),
+  invoiceTaxId: text("invoice_tax_id"),
+  status: applicationStatus("status").notNull().default("submitted"),
+  adminNote: text("admin_note"),
+  reviewedBy: text("reviewed_by"),
+  reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// เอกสารแนบใบสมัคร (เก็บในฐานข้อมูล ไม่เปิดสาธารณะ) kind: id_card | education
+export const applicationFiles = pgTable("application_files", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  applicationId: uuid("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull(),
+  name: text("name").notNull(),
+  contentType: text("content_type").notNull(),
+  size: integer("size").notNull(),
+  data: bytea("data").notNull(),
+  status: text("status").notNull().default("pending"), // pending | ok | rejected
+  note: text("note"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+});

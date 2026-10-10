@@ -13,6 +13,7 @@ const { data: latest } = await useAsyncData("latest-articles", () =>
 );
 
 const asset = useAsset();
+const applyTo = useRuntimeConfig().public.membersEnabled ? "/apply" : "/#contact";
 const latestThree = computed(() => (latest.value ?? []).slice(0, 3));
 const { data: faq } = await useAsyncData("faq", () => queryCollection("faq").order("order", "ASC").all());
 const { data: docs } = await useAsyncData("documents", () => queryCollection("documents").order("order", "ASC").all());
@@ -55,7 +56,7 @@ const WHY = [
             สร้างทีมที่มีพื้นฐาน ลดภาระการสอนงาน ยกระดับมาตรฐานโรงพยาบาลสัตว์ พร้อมเป็นส่วนหนึ่งของทีมอย่างมั่นใจ
           </p>
           <div class="mt-7 flex flex-wrap gap-3">
-            <a href="#contact" class="btn-brand px-6 py-3"><span class="inline-flex items-center gap-2 whitespace-nowrap">สมัครเรียน / สอบถาม <ArrowRight class="size-5" /></span></a>
+            <NuxtLink :to="applyTo" class="btn-brand px-6 py-3"><span class="inline-flex items-center gap-2 whitespace-nowrap">สมัครเรียน / สอบถาม <ArrowRight class="size-5" /></span></NuxtLink>
             <a href="#cohorts" class="rounded-full border-2 border-navy-800 px-6 py-3 font-semibold text-navy-800 hover:bg-navy-800 hover:text-white">ดูตารางเรียน</a>
           </div>
           <NuxtLink to="/collaboration" class="mt-8 inline-flex flex-wrap items-center gap-4 rounded-2xl bg-white/90 px-5 py-3 shadow-sm transition hover:shadow-md">
@@ -93,7 +94,7 @@ const WHY = [
               <span class="rounded-full bg-brand px-5 py-2 text-lg font-bold text-white">{{ COHORT.name }}</span>
               <span class="rounded-full bg-ok/10 px-3 py-1 text-xs font-medium text-ok">● เปิดรับสมัคร · {{ COHORT.seatsLeft }} ที่นั่ง</span>
             </div>
-            <a href="#contact" class="rounded-full bg-navy-800 px-5 py-2 text-sm font-semibold text-white">สมัครรุ่นนี้ →</a>
+            <NuxtLink :to="applyTo" class="rounded-full bg-navy-800 px-5 py-2 text-sm font-semibold text-white">สมัครรุ่นนี้ →</NuxtLink>
           </div>
           <div class="mt-5 grid gap-4 md:grid-cols-3">
             <div v-for="(s, i) in COHORT.sessions" :key="s.title" class="rounded-2xl bg-sky-card/60 p-4 text-sm">
@@ -119,7 +120,7 @@ const WHY = [
               <div class="font-semibold">★ พิเศษ! สมัครครบทั้ง 2 ภาค</div>
               <div class="mt-1 text-xs opacity-90">จาก 17,000 บาท · ประหยัด 2,000 บาท</div>
               <div class="mt-4 text-5xl font-bold">{{ baht(p.price) }} <span class="text-lg font-medium">บาท/คน</span></div>
-              <a href="#contact" class="mt-5 inline-block rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-dark">สมัครแพ็กเกจนี้</a>
+              <NuxtLink :to="applyTo" class="mt-5 inline-block rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-dark">สมัครแพ็กเกจนี้</NuxtLink>
             </div>
             <div v-else class="rounded-3xl bg-white p-6 shadow-md">
               <component :is="p.id === 'theory' ? Laptop : Hospital" class="size-7 text-navy-800" />
