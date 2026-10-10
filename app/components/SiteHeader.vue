@@ -1,3 +1,7 @@
+<script setup lang="ts">
+const applyTo = useRuntimeConfig().public.membersEnabled ? "/apply" : "/#contact";
+</script>
+
 <template>
   <header class="sticky top-0 z-30 border-b border-sky-card bg-white/90 backdrop-blur">
     <div class="mx-auto flex h-14 max-w-6xl items-center justify-between px-5">
@@ -14,7 +18,7 @@
         <NuxtLink to="/albums" class="hidden text-navy-800 hover:text-brand md:inline">อัลบั้มรูป</NuxtLink>
         <NuxtLink to="/articles" class="text-navy-800 hover:text-brand">บทความ</NuxtLink>
         <MemberLink />
-        <NuxtLink to="/#contact" class="btn-brand px-4 py-2 text-sm">สมัครเรียน</NuxtLink>
+        <NuxtLink :to="applyTo" class="btn-brand px-4 py-2 text-sm">สมัครเรียน</NuxtLink>
       </nav>
     </div>
   </header>

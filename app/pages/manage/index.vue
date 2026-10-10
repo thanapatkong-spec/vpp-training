@@ -16,6 +16,7 @@ const loaded = ref(false);
 const adminKey = ref("");
 const keyInput = ref("");
 const authHeaders = () => (adminKey.value ? { "x-admin-key": adminKey.value } : undefined);
+const openFile = useAuthedOpen(authHeaders);
 onMounted(() => {
   try { adminKey.value = sessionStorage.getItem("vpp-admin-key") || ""; } catch {}
 });
@@ -28,7 +29,7 @@ async function submitKey() {
 
 type Member = { id: string; name: string; email: string; emailVerified: boolean; phone: string | null; cohort: string | null; imported: boolean; activated: boolean; placeholder: boolean; certCount: number; admin: boolean };
 type Cert = { id: string; title: string; certNo: string | null; issuedOn: string | null };
-const tab = ref<"members" | "claims" | "content">("members");
+const tab = ref<string>("applications");
 const openId = ref("");
 const certs = ref<Cert[]>([]);
 const cf = reactive<{ file?: File; title: string; certNo: string; issuedOn: string; busy: boolean; err: string; ok: string }>({ title: "", certNo: "", issuedOn: "", busy: false, err: "", ok: "" });
@@ -289,10 +290,11 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
       </form>
     </div>
     <nav v-if="!forbidden" class="mt-6 flex flex-wrap gap-2 text-sm font-semibold">
-      <button v-for="t in ([['members', 'สมาชิกและใบประกาศ'], ...(rows.length ? [['claims', `คำขอเดิมจากสมาชิก${rows.some((r) => r.status === 'pending') ? ` (${rows.filter((r) => r.status === 'pending').length})` : ''}`]] : []), ['content', 'เนื้อหาเว็บ']] as const)" :key="t[0]"
+      <button v-for="t in ([['applications', 'ใบสมัคร'], ['members', 'สมาชิกและใบประกาศ'], ...(rows.length ? [['claims', `คำขอเดิมจากสมาชิก${rows.some((r) => r.status === 'pending') ? ` (${rows.filter((r) => r.status === 'pending').length})` : ''}`]] : []), ['content', 'เนื้อหาเว็บ']] as const)" :key="t[0]"
         class="rounded-full px-5 py-2" :class="tab === t[0] ? 'bg-navy-800 text-white' : 'bg-white text-navy-800 shadow-sm'" @click="tab = t[0]">{{ t[1] }}</button>
     </nav>
 
+    <ApplicationsAdmin v-if="!forbidden && tab === 'applications'" :auth-headers="authHeaders" />
     <CmsEditor v-if="!forbidden && tab === 'content'" :auth-headers="authHeaders" />
     <p v-if="!forbidden && tab === 'content'" class="mt-6 text-xs text-slate-500">ต้องตั้งค่า <code>GITHUB_TOKEN</code> บน Vercel ก่อนใช้งาน (ดู docs/members-setup.md) · หน้าจัดการแบบเดิม (สำรอง): <a :href="asset('/admin/')" target="_blank" class="underline">/admin/</a></p>
 
@@ -406,7 +408,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
                       <li v-for="c in certs" :key="c.id" class="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
                         <span>{{ c.title }}<span v-if="c.certNo" class="text-slate-500"> · เลขที่ {{ c.certNo }}</span><span v-if="c.issuedOn" class="text-slate-500"> · {{ c.issuedOn }}</span></span>
                         <span class="whitespace-nowrap">
-                          <a :href="`/api/certificates/${c.id}/file`" target="_blank" class="mr-3 text-xs text-navy-800 hover:underline">เปิดไฟล์</a>
+                          <button type="button" class="mr-3 text-xs text-navy-800 hover:underline" @click="openFile(`/api/certificates/${c.id}/file`)">เปิดไฟล์</button>
                           <button class="text-xs text-red-600 hover:underline" @click="removeCert(m, c)">ลบ</button>
                         </span>
                       </li>

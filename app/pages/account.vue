@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { Download, FileCheck2, LogOut } from "lucide-vue-next";
+import { APP_STATUS } from "#shared/application";
 
 useHead({ title: "บัญชีของฉัน · VPP" });
 const auth = useAuthClient();
@@ -11,8 +12,10 @@ type Cert = { id: string; title: string; certNo: string | null; issuedOn: string
 
 const me = ref<{ isAdmin: boolean; adminCandidate: boolean; phone: string; cohort: string } | null>(null);
 const certs = ref<Cert[]>([]);
+const app = ref<{ status: string; adminNote: string | null } | null>(null);
 
 async function load() {
+  $fetch<{ status: string; adminNote: string | null } | null>("/api/me/application").then((a) => (app.value = a)).catch(() => {});
   [me.value, certs.value] = await Promise.all([
     $fetch<{ isAdmin: boolean; adminCandidate: boolean; phone: string; cohort: string }>("/api/me"),
     $fetch<Cert[]>("/api/me/certificates"),
@@ -70,7 +73,18 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
       </div>
     </div>
 
-    <section class="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+    <section v-if="app" class="mt-8 flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-white p-6 shadow-sm">
+      <div>
+        <h2 class="text-xl font-bold text-navy-800">ใบสมัครเรียน VPP</h2>
+        <p v-if="app.adminNote" class="mt-1 text-sm text-slate-600">หมายเหตุจากทีมงาน: {{ app.adminNote }}</p>
+      </div>
+      <div class="flex items-center gap-3">
+        <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="APP_STATUS[app.status]?.[1]">{{ APP_STATUS[app.status]?.[0] }}</span>
+        <NuxtLink to="/apply" class="text-sm text-navy-800 underline">{{ app.status === "needs_changes" ? "แก้ไขใบสมัคร" : "ดูรายละเอียด" }}</NuxtLink>
+      </div>
+    </section>
+
+    <section class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
       <h2 class="text-xl font-bold text-navy-800">โปรไฟล์ของฉัน</h2>
       <form class="mt-4 grid gap-3 md:grid-cols-2" @submit.prevent="saveProfile">
         <label class="text-xs text-slate-600">ชื่อ-นามสกุล

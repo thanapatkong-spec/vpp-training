@@ -36,5 +36,6 @@ export default defineNuxtConfig({
     "/account": { ssr: false },
     "/manage": { ssr: false },
     "/activate": { ssr: false },
+    "/apply": { ssr: false },
   },
 });

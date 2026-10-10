@@ -2,6 +2,8 @@
 useHead({ title: "สมัครสมาชิก · VPP" });
 const config = useRuntimeConfig();
 const auth = useAuthClient();
+const nextQ = String(useRoute().query.next || "");
+const nextUrl = nextQ.startsWith("/") && !nextQ.startsWith("//") ? nextQ : "/account";
 
 const name = ref("");
 const email = ref("");
@@ -20,11 +22,11 @@ async function submit() {
   if (err) return (error.value = /exist|already/i.test(`${err.code} ${err.message}`) ? "อีเมลนี้มีบัญชีอยู่แล้ว หากเป็นสมาชิกที่แอดมินสร้างไว้ให้ ใช้ลิงก์เปิดใช้งานบัญชีที่แอดมินส่งให้ หรือเข้าสู่ระบบด้วย Google" : err.message || "สมัครสมาชิกไม่สำเร็จ");
   // ถ้าระบบบังคับยืนยันอีเมล จะยังไม่ได้ล็อกอิน
   const { data } = await auth.getSession();
-  if (data) return navigateTo("/account");
+  if (data) return navigateTo(nextUrl);
   sentTo.value = email.value;
 }
 
-const google = () => auth.signIn.social({ provider: "google", callbackURL: "/account" });
+const google = () => auth.signIn.social({ provider: "google", callbackURL: nextUrl });
 </script>
 
 <template>
