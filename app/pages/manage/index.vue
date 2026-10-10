@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { Paperclip } from "lucide-vue-next";
 useHead({ title: "ระบบแอดมิน · VPP" });
 const auth = useAuthClient();
 const asset = useAsset();
@@ -43,6 +44,10 @@ async function toggleCerts(m: Member) {
   linkMsg.value = "";
   certs.value = [];
   await loadCerts(m.id);
+}
+function onPickAttach(f: File) {
+  cf.err = "";
+  if (!cf.title.trim()) cf.title = f.name.replace(/\.[^.]+$/, ""); // เติมชื่อไฟล์ให้ก่อน แก้ได้
 }
 async function saveProfile(m: Member) {
   pf.msg = "";
@@ -94,7 +99,7 @@ async function loadCerts(id: string) {
 }
 async function issueCert(m: Member) {
   cf.err = cf.ok = "";
-  if (!cf.file) return (cf.err = "กรุณาเลือกไฟล์ที่จะแนบ");
+  if (!cf.file) return (cf.err = "กรุณากดปุ่ม \"แนบไฟล์\" แล้วเลือกไฟล์ก่อน");
   if (!cf.title.trim()) return (cf.err = "กรุณาใส่ชื่อไฟล์");
   const fd = new FormData();
   fd.append("file", cf.file);
@@ -108,7 +113,7 @@ async function issueCert(m: Member) {
     Object.assign(cf, { file: undefined, title: "", certNo: "", issuedOn: "" });
     await Promise.all([loadCerts(m.id), loadMembers()]);
   } catch (e: any) {
-    cf.err = e?.data?.message || "แนบไฟล์ไม่สำเร็จ";
+    cf.err = uploadError(e, "แนบไฟล์ไม่สำเร็จ");
   } finally {
     cf.busy = false;
   }
@@ -173,7 +178,7 @@ const error = ref<Record<string, string>>({});
 async function approve(id: string) {
   error.value[id] = "";
   const file = files[id];
-  if (!file) return (error.value[id] = "กรุณาเลือกไฟล์ PDF ใบประกาศ");
+  if (!file) return (error.value[id] = "กรุณากดปุ่ม \"แนบไฟล์\" แล้วเลือกไฟล์ใบประกาศก่อน");
   busy.value = id;
   const fd = new FormData();
   fd.append("file", file);
@@ -184,7 +189,7 @@ async function approve(id: string) {
     await $fetch(`/api/manage/claims/${id}/approve`, { method: "POST", body: fd, headers: authHeaders() });
     await load();
   } catch (e: any) {
-    error.value[id] = e?.data?.message || "อนุมัติไม่สำเร็จ";
+    error.value[id] = uploadError(e, "อนุมัติไม่สำเร็จ");
   } finally {
     busy.value = "";
   }
@@ -256,6 +261,9 @@ async function runImport(dryRun: boolean) {
   }
 }
 
+const uploadError = (e: any, fallback: string) =>
+  e?.status === 413 || e?.statusCode === 413 ? "ไฟล์ใหญ่เกินที่ระบบรับได้ (ไม่เกิน 4MB) กรุณาย่อขนาดไฟล์" : e?.data?.message || `${fallback} (${e?.status || e?.statusCode || "เชื่อมต่อไม่ได้"})`;
+
 const status = { pending: ["รอตรวจสอบ", "bg-amber-100 text-amber-800"], approved: ["อนุมัติแล้ว", "bg-green-100 text-green-800"], rejected: ["ไม่อนุมัติ", "bg-red-100 text-red-700"] } as const;
 const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" }) : "-");
 </script>
@@ -291,9 +299,9 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         <p v-if="r.adminNote" class="mt-1 text-sm text-slate-600">หมายเหตุแอดมิน: {{ r.adminNote }}</p>
 
         <div v-if="r.status === 'pending'" class="mt-4 grid gap-3 border-t border-sky-card pt-4 md:grid-cols-2">
-          <label class="text-xs text-slate-600">ไฟล์ PDF ใบประกาศ (ไม่เกิน 4MB) *
-            <input type="file" accept="application/pdf" class="mt-1 block w-full text-sm" @change="files[r.id] = ($event.target as HTMLInputElement).files?.[0]" />
-          </label>
+          <div class="text-xs text-slate-600 md:col-span-2">ไฟล์ใบประกาศ (PDF / JPG / PNG ไม่เกิน 4MB) *
+            <FilePickButton v-model="files[r.id]" class="mt-1" />
+          </div>
           <input v-model="certNo[r.id]" class="field" placeholder="เลขที่ใบประกาศ (ถ้ามี)" />
           <label class="text-xs text-slate-600">วันที่ออกใบ
             <input v-model="issuedOn[r.id]" type="date" class="field mt-1" />
@@ -311,7 +319,10 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
     <section v-if="!forbidden && tab === 'members'" class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
       <h2 class="text-xl font-bold text-navy-800">นำเข้าสมาชิกจากรายชื่อ (Excel)</h2>
       <p class="mt-1 text-sm text-slate-600">เลือกไฟล์ .xlsx ที่มีชีต "VPP 1", "VPP 2", ... คอลัมน์ ชื่อ-สกุล / เบอร์โทรศัพท์ / อีเมล ระบบจะสร้างบัญชีสมาชิกที่ยังไม่มีรหัสผ่าน (คนที่ไม่มีอีเมลจะถูกสร้างไว้โดยยังไม่มีอีเมล แล้วเติมทีหลังได้ ข้ามคนที่มีบัญชี/ชื่อซ้ำอยู่แล้ว) ให้สมาชิกเปิดใช้งานบัญชีผ่าน "ลิงก์เปิดใช้งาน" (สร้างได้ในรายชื่อสมาชิกด้านล่าง) หรือเข้าด้วย Google อีเมลเดียวกัน</p>
-      <input type="file" accept=".xlsx" class="mt-4 block text-sm" @change="pickExcel" />
+      <label class="mt-4 inline-flex cursor-pointer items-center gap-2 rounded-full border-2 border-navy-800 bg-white px-5 py-2 text-sm font-semibold text-navy-800 hover:bg-navy-800 hover:text-white">
+        <Paperclip class="size-4" />เลือกไฟล์ Excel (.xlsx)
+        <input type="file" accept=".xlsx" class="hidden" @change="pickExcel" />
+      </label>
       <p v-if="impMsg" class="mt-2 text-sm text-slate-600">{{ impMsg }}</p>
       <div v-if="impRows.length" class="mt-3 flex gap-2">
         <button :disabled="impBusy" class="rounded-full border border-navy-800 px-5 py-2 text-sm text-navy-800 disabled:opacity-60" @click="runImport(true)">ตรวจสอบก่อน (ยังไม่สร้าง)</button>
@@ -394,9 +405,9 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
                     </ul>
                     <p v-else class="mt-1 text-xs text-slate-500">ยังไม่มีไฟล์</p>
                     <div class="mt-3 grid gap-2 md:grid-cols-2">
-                      <label class="text-xs text-slate-600">แนบไฟล์ (PDF / JPG / PNG ไม่เกิน 4MB) *
-                        <input type="file" accept="application/pdf,image/jpeg,image/png" class="mt-1 block w-full text-sm" @change="cf.file = ($event.target as HTMLInputElement).files?.[0]" />
-                      </label>
+                      <div class="text-xs text-slate-600">แนบไฟล์ (PDF / JPG / PNG ไม่เกิน 4MB) *
+                        <FilePickButton v-model="cf.file" class="mt-1" @picked="onPickAttach" />
+                      </div>
                       <label class="text-xs text-slate-600">ชื่อไฟล์ที่แสดง *
                         <input v-model="cf.title" class="field mt-1" placeholder="เช่น ประกาศนียบัตร VPP รุ่นที่ 3" />
                       </label>
