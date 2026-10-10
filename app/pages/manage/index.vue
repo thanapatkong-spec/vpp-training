@@ -25,18 +25,67 @@ async function submitKey() {
   await load();
 }
 
-type Member = { id: string; name: string; email: string; emailVerified: boolean; phone: string | null; cohort: string | null; imported: boolean; certCount: number; admin: boolean };
+type Member = { id: string; name: string; email: string; emailVerified: boolean; phone: string | null; cohort: string | null; imported: boolean; activated: boolean; placeholder: boolean; certCount: number; admin: boolean };
 type Cert = { id: string; title: string; certNo: string | null; issuedOn: string | null };
 const tab = ref<"members" | "claims" | "content">("members");
 const openId = ref("");
 const certs = ref<Cert[]>([]);
 const cf = reactive<{ file?: File; title: string; certNo: string; issuedOn: string; busy: boolean; err: string; ok: string }>({ title: "", certNo: "", issuedOn: "", busy: false, err: "", ok: "" });
+const pf = reactive({ name: "", email: "", phone: "", cohort: "", busy: false, msg: "", ok: false });
+const link = ref<{ url: string; expiresAt: string } | null>(null);
+const linkMsg = ref("");
 async function toggleCerts(m: Member) {
   if (openId.value === m.id) return (openId.value = "");
   openId.value = m.id;
   Object.assign(cf, { file: undefined, title: "", certNo: "", issuedOn: "", err: "", ok: "" });
+  Object.assign(pf, { name: m.name, email: m.placeholder ? "" : m.email, phone: m.phone || "", cohort: m.cohort || "", msg: "", ok: false });
+  link.value = null;
+  linkMsg.value = "";
   certs.value = [];
   await loadCerts(m.id);
+}
+async function saveProfile(m: Member) {
+  pf.msg = "";
+  pf.busy = true;
+  try {
+    await $fetch(`/api/manage/members/${m.id}`, { method: "PATCH", body: { name: pf.name, email: pf.email || undefined, phone: pf.phone, cohort: pf.cohort }, headers: authHeaders() });
+    pf.ok = true;
+    pf.msg = "บันทึกโปรไฟล์แล้ว";
+    await loadMembers();
+  } catch (e: any) {
+    pf.ok = false;
+    pf.msg = e?.data?.message || "บันทึกไม่สำเร็จ";
+  } finally {
+    pf.busy = false;
+  }
+}
+async function makeLink(m: Member) {
+  linkMsg.value = "";
+  try {
+    link.value = await $fetch(`/api/manage/members/${m.id}/activation-link`, { method: "POST", headers: authHeaders() });
+  } catch (e: any) {
+    linkMsg.value = e?.data?.message || "สร้างลิงก์ไม่สำเร็จ";
+  }
+}
+async function copyLink() {
+  if (!link.value) return;
+  try { await navigator.clipboard.writeText(link.value.url); linkMsg.value = "คัดลอกแล้ว"; } catch { linkMsg.value = "คัดลอกไม่ได้ ให้เลือกข้อความแล้วคัดลอกเอง"; }
+}
+const csvCell = (v: string) => `"${(v || "").replace(/"/g, '""')}"`;
+async function bulkLinks() {
+  const label = cohortFilter.value || "ทุกรุ่น";
+  if (!confirm(`สร้างลิงก์เปิดใช้งานให้สมาชิกที่นำเข้าและยังไม่เปิดใช้งาน (${label}) ?\nลิงก์เก่าที่ยังไม่ได้ใช้จะถูกยกเลิก`)) return;
+  try {
+    const rows = await $fetch<{ name: string; cohort: string | null; phone: string | null; email: string; url: string }[]>("/api/manage/members/activation-links", { method: "POST", body: { cohort: cohortFilter.value || undefined }, headers: authHeaders() });
+    if (!rows.length) return alert("ไม่มีสมาชิกที่ยังไม่เปิดใช้งาน");
+    const csv = "\ufeffชื่อ-สกุล,รุ่น,เบอร์โทร,อีเมล,ลิงก์เปิดใช้งาน\n" + rows.map((r) => [r.name, r.cohort || "", r.phone || "", r.email, r.url].map(csvCell).join(",")).join("\n");
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+    a.download = `activation-links-${label}.csv`;
+    a.click();
+  } catch (e: any) {
+    alert(e?.data?.message || "สร้างลิงก์ไม่สำเร็จ");
+  }
 }
 async function loadCerts(id: string) {
   try {
@@ -45,7 +94,8 @@ async function loadCerts(id: string) {
 }
 async function issueCert(m: Member) {
   cf.err = cf.ok = "";
-  if (!cf.file) return (cf.err = "กรุณาเลือกไฟล์ PDF ใบประกาศ");
+  if (!cf.file) return (cf.err = "กรุณาเลือกไฟล์ที่จะแนบ");
+  if (!cf.title.trim()) return (cf.err = "กรุณาใส่ชื่อไฟล์");
   const fd = new FormData();
   fd.append("file", cf.file);
   if (cf.title) fd.append("title", cf.title);
@@ -54,17 +104,17 @@ async function issueCert(m: Member) {
   cf.busy = true;
   try {
     await $fetch(`/api/manage/members/${m.id}/certificates`, { method: "POST", body: fd, headers: authHeaders() });
-    cf.ok = "ออกใบประกาศให้สมาชิกแล้ว สมาชิกดาวน์โหลดได้ที่หน้าบัญชีของฉัน";
+    cf.ok = "แนบไฟล์ให้สมาชิกแล้ว สมาชิกดาวน์โหลดได้ที่หน้าบัญชีของฉัน";
     Object.assign(cf, { file: undefined, title: "", certNo: "", issuedOn: "" });
     await Promise.all([loadCerts(m.id), loadMembers()]);
   } catch (e: any) {
-    cf.err = e?.data?.message || "ออกใบประกาศไม่สำเร็จ";
+    cf.err = e?.data?.message || "แนบไฟล์ไม่สำเร็จ";
   } finally {
     cf.busy = false;
   }
 }
 async function removeCert(m: Member, c: Cert) {
-  if (!confirm(`ลบใบประกาศ "${c.title}" ของ ${m.name} ?`)) return;
+  if (!confirm(`ลบไฟล์ "${c.title}" ของ ${m.name} ?`)) return;
   try {
     await $fetch(`/api/manage/certificates/${c.id}`, { method: "DELETE", headers: authHeaders() });
     await Promise.all([loadCerts(m.id), loadMembers()]);
@@ -157,7 +207,7 @@ async function reject(id: string) {
 type Imp = { name: string; email: string; phone?: string; cohort: string };
 const impRows = ref<Imp[]>([]);
 const impMsg = ref("");
-const impResult = ref<{ dryRun: boolean; create: number; skipped: { name: string; reason: string }[] } | null>(null);
+const impResult = ref<{ dryRun: boolean; create: number; noEmail?: number; skipped: { name: string; reason: string }[] } | null>(null);
 const impBusy = ref(false);
 
 async function pickExcel(e: Event) {
@@ -260,7 +310,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
 
     <section v-if="!forbidden && tab === 'members'" class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
       <h2 class="text-xl font-bold text-navy-800">นำเข้าสมาชิกจากรายชื่อ (Excel)</h2>
-      <p class="mt-1 text-sm text-slate-600">เลือกไฟล์ .xlsx ที่มีชีต "VPP 1", "VPP 2", ... คอลัมน์ ชื่อ-สกุล / เบอร์โทรศัพท์ / อีเมล ระบบจะสร้างบัญชีสมาชิกที่ยังไม่มีรหัสผ่าน (ข้ามคนที่ไม่มีอีเมลหรือมีบัญชีแล้ว) สมาชิกเข้าสู่ระบบด้วย Google อีเมลเดียวกัน หรือใช้ "ลืมรหัสผ่าน" เพื่อตั้งรหัสผ่าน</p>
+      <p class="mt-1 text-sm text-slate-600">เลือกไฟล์ .xlsx ที่มีชีต "VPP 1", "VPP 2", ... คอลัมน์ ชื่อ-สกุล / เบอร์โทรศัพท์ / อีเมล ระบบจะสร้างบัญชีสมาชิกที่ยังไม่มีรหัสผ่าน (คนที่ไม่มีอีเมลจะถูกสร้างไว้โดยยังไม่มีอีเมล แล้วเติมทีหลังได้ ข้ามคนที่มีบัญชี/ชื่อซ้ำอยู่แล้ว) ให้สมาชิกเปิดใช้งานบัญชีผ่าน "ลิงก์เปิดใช้งาน" (สร้างได้ในรายชื่อสมาชิกด้านล่าง) หรือเข้าด้วย Google อีเมลเดียวกัน</p>
       <input type="file" accept=".xlsx" class="mt-4 block text-sm" @change="pickExcel" />
       <p v-if="impMsg" class="mt-2 text-sm text-slate-600">{{ impMsg }}</p>
       <div v-if="impRows.length" class="mt-3 flex gap-2">
@@ -268,7 +318,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         <button :disabled="impBusy || !impResult || !impResult.dryRun || !impResult.create" class="btn-brand px-5 py-2 text-sm disabled:opacity-50" @click="runImport(false)">ยืนยันนำเข้า</button>
       </div>
       <div v-if="impResult" class="mt-3 text-sm">
-        <p class="font-semibold text-navy-800">{{ impResult.dryRun ? "ผลตรวจสอบ: จะสร้างสมาชิกใหม่" : "สร้างสมาชิกแล้ว" }} {{ impResult.create }} คน · ข้าม {{ impResult.skipped.length }} คน</p>
+        <p class="font-semibold text-navy-800">{{ impResult.dryRun ? "ผลตรวจสอบ: จะสร้างสมาชิกใหม่" : "สร้างสมาชิกแล้ว" }} {{ impResult.create }} คน{{ impResult.noEmail ? ` (ไม่มีอีเมล ${impResult.noEmail} คน)` : "" }} · ข้าม {{ impResult.skipped.length }} คน</p>
         <ul class="mt-1 list-disc pl-5 text-slate-600">
           <li v-for="(k, i) in impResult.skipped" :key="i">{{ k.name }}: {{ k.reason }}</li>
         </ul>
@@ -283,6 +333,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
           <option value="">ทุกรุ่น</option>
           <option v-for="c in cohorts" :key="c" :value="c">{{ c }}</option>
         </select>
+        <button class="rounded-full border border-navy-800 px-4 py-2 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="bulkLinks">ดาวน์โหลดลิงก์เปิดใช้งาน (CSV){{ cohortFilter ? ` · ${cohortFilter}` : "" }}</button>
       </div>
       <p v-if="!members.length" class="mt-4 text-sm text-slate-500">ยังไม่มีสมาชิก</p>
       <div v-else class="mt-4 overflow-x-auto">
@@ -296,39 +347,66 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
                 <td class="py-2 pr-3 font-medium text-navy-800">{{ m.name }}
                   <span v-if="m.admin" class="ml-1 rounded-full bg-navy-800 px-2 py-0.5 text-[10px] text-white">แอดมิน</span>
                   <span v-else-if="!m.imported" class="ml-1 rounded-full bg-sky-card px-2 py-0.5 text-[10px] text-navy-800">สมัครเอง</span>
+                  <span v-else-if="!m.activated" class="ml-1 rounded-full bg-amber-100 px-2 py-0.5 text-[10px] text-amber-800">ยังไม่เปิดใช้งาน</span>
                 </td>
-                <td class="pr-3">{{ m.email }}</td>
+                <td class="pr-3">{{ m.placeholder ? "(ยังไม่มีอีเมล)" : m.email }}</td>
                 <td class="pr-3">{{ m.phone || "-" }}</td>
                 <td class="pr-3">{{ m.cohort || "-" }}</td>
                 <td class="whitespace-nowrap text-right">
-                  <button class="mr-3 rounded-full border border-navy-800 px-3 py-1 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="toggleCerts(m)">ใบประกาศ ({{ m.certCount }})</button>
+                  <button class="mr-3 rounded-full border border-navy-800 px-3 py-1 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="toggleCerts(m)">จัดการ · ไฟล์ ({{ m.certCount }})</button>
                   <button v-if="m.imported && !m.admin" class="text-xs text-red-600 hover:underline" @click="removeMember(m)">ลบ</button>
                 </td>
               </tr>
               <tr v-if="openId === m.id" class="bg-sky-soft">
-                <td colspan="5" class="px-4 py-4">
-                  <p class="font-semibold text-navy-800">ใบประกาศของ {{ m.name }}</p>
-                  <ul v-if="certs.length" class="mt-2 space-y-1">
-                    <li v-for="c in certs" :key="c.id" class="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
-                      <span>{{ c.title }}<span v-if="c.certNo" class="text-slate-500"> · เลขที่ {{ c.certNo }}</span><span v-if="c.issuedOn" class="text-slate-500"> · {{ c.issuedOn }}</span></span>
-                      <span class="whitespace-nowrap">
-                        <a :href="`/api/certificates/${c.id}/file`" target="_blank" class="mr-3 text-xs text-navy-800 hover:underline">เปิดไฟล์</a>
-                        <button class="text-xs text-red-600 hover:underline" @click="removeCert(m, c)">ลบ</button>
-                      </span>
-                    </li>
-                  </ul>
-                  <p v-else class="mt-1 text-xs text-slate-500">ยังไม่มีใบประกาศ</p>
-                  <div class="mt-3 grid gap-2 md:grid-cols-2">
-                    <label class="text-xs text-slate-600">ไฟล์ PDF ใบประกาศ (ไม่เกิน 4MB) *
-                      <input type="file" accept="application/pdf" class="mt-1 block w-full text-sm" @change="cf.file = ($event.target as HTMLInputElement).files?.[0]" />
-                    </label>
-                    <input v-model="cf.title" class="field self-end" placeholder="ชื่อใบประกาศ (เว้นว่าง = ค่าเริ่มต้น)" />
-                    <input v-model="cf.certNo" class="field" placeholder="เลขที่ใบประกาศ (ถ้ามี)" />
-                    <label class="text-xs text-slate-600">วันที่ออกใบ <input v-model="cf.issuedOn" type="date" class="field mt-1" /></label>
+                <td colspan="5" class="space-y-6 px-4 py-4">
+                  <div>
+                    <p class="font-semibold text-navy-800">โปรไฟล์</p>
+                    <div class="mt-2 grid gap-2 md:grid-cols-2">
+                      <input v-model="pf.name" class="field" placeholder="ชื่อ-สกุล *" />
+                      <input v-model="pf.email" type="email" class="field" :placeholder="m.placeholder ? 'อีเมล (ยังไม่มี)' : 'อีเมล'" :disabled="m.admin" />
+                      <input v-model="pf.phone" class="field" placeholder="เบอร์โทรศัพท์" />
+                      <input v-model="pf.cohort" class="field" placeholder="รุ่น เช่น รุ่นที่ 3" />
+                    </div>
+                    <p v-if="pf.msg" class="mt-2 text-sm" :class="pf.ok ? 'text-green-700' : 'text-red-700'">{{ pf.msg }}</p>
+                    <button :disabled="pf.busy" class="btn-brand mt-2 px-5 py-2 text-sm disabled:opacity-60" @click="saveProfile(m)">บันทึกโปรไฟล์</button>
                   </div>
-                  <p v-if="cf.err" class="mt-2 text-sm text-red-700">{{ cf.err }}</p>
-                  <p v-if="cf.ok" class="mt-2 text-sm text-green-700">{{ cf.ok }}</p>
-                  <button :disabled="cf.busy" class="btn-brand mt-3 px-5 py-2 text-sm disabled:opacity-60" @click="issueCert(m)">ออกใบประกาศให้สมาชิกคนนี้</button>
+
+                  <div v-if="!m.admin">
+                    <p class="font-semibold text-navy-800">เปิดใช้งานบัญชี <span class="text-xs font-normal text-slate-500">({{ m.activated ? "เปิดใช้งานแล้ว สร้างลิงก์ใหม่ได้ถ้าสมาชิกลืมรหัสผ่าน" : "ส่งลิงก์นี้ให้เจ้าของบัญชีเพื่อตั้งรหัสผ่านเอง" }})</span></p>
+                    <button class="mt-2 rounded-full border border-navy-800 px-4 py-1.5 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="makeLink(m)">สร้างลิงก์เปิดใช้งาน (อายุ 14 วัน)</button>
+                    <div v-if="link" class="mt-2 flex flex-wrap items-center gap-2">
+                      <input :value="link.url" readonly class="field max-w-xl flex-1 text-xs" @focus="($event.target as HTMLInputElement).select()" />
+                      <button class="rounded-full bg-navy-800 px-4 py-1.5 text-xs text-white" @click="copyLink">คัดลอก</button>
+                    </div>
+                    <p v-if="linkMsg" class="mt-1 text-xs text-slate-600">{{ linkMsg }}</p>
+                  </div>
+
+                  <div>
+                    <p class="font-semibold text-navy-800">ไฟล์และใบประกาศของ {{ m.name }}</p>
+                    <ul v-if="certs.length" class="mt-2 space-y-1">
+                      <li v-for="c in certs" :key="c.id" class="flex items-center justify-between gap-3 rounded-xl bg-white px-3 py-2">
+                        <span>{{ c.title }}<span v-if="c.certNo" class="text-slate-500"> · เลขที่ {{ c.certNo }}</span><span v-if="c.issuedOn" class="text-slate-500"> · {{ c.issuedOn }}</span></span>
+                        <span class="whitespace-nowrap">
+                          <a :href="`/api/certificates/${c.id}/file`" target="_blank" class="mr-3 text-xs text-navy-800 hover:underline">เปิดไฟล์</a>
+                          <button class="text-xs text-red-600 hover:underline" @click="removeCert(m, c)">ลบ</button>
+                        </span>
+                      </li>
+                    </ul>
+                    <p v-else class="mt-1 text-xs text-slate-500">ยังไม่มีไฟล์</p>
+                    <div class="mt-3 grid gap-2 md:grid-cols-2">
+                      <label class="text-xs text-slate-600">แนบไฟล์ (PDF / JPG / PNG ไม่เกิน 4MB) *
+                        <input type="file" accept="application/pdf,image/jpeg,image/png" class="mt-1 block w-full text-sm" @change="cf.file = ($event.target as HTMLInputElement).files?.[0]" />
+                      </label>
+                      <label class="text-xs text-slate-600">ชื่อไฟล์ที่แสดง *
+                        <input v-model="cf.title" class="field mt-1" placeholder="เช่น ประกาศนียบัตร VPP รุ่นที่ 3" />
+                      </label>
+                      <input v-model="cf.certNo" class="field" placeholder="เลขที่ (ถ้ามี)" />
+                      <label class="text-xs text-slate-600">วันที่ออก <input v-model="cf.issuedOn" type="date" class="field mt-1" /></label>
+                    </div>
+                    <p v-if="cf.err" class="mt-2 text-sm text-red-700">{{ cf.err }}</p>
+                    <p v-if="cf.ok" class="mt-2 text-sm text-green-700">{{ cf.ok }}</p>
+                    <button :disabled="cf.busy" class="btn-brand mt-3 px-5 py-2 text-sm disabled:opacity-60" @click="issueCert(m)">แนบไฟล์ให้สมาชิกคนนี้</button>
+                  </div>
                 </td>
               </tr>
             </template>
