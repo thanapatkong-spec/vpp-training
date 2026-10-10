@@ -109,4 +109,5 @@ collections:
       - { name: date, label: วันที่, widget: datetime, date_format: "YYYY-MM-DD", time_format: false, format: "YYYY-MM-DD" }
       - { name: cohort, label: รุ่น (เช่น รุ่น พ.ย. 2569), widget: string, required: false }
       - { name: cover, label: รูปปกอัลบั้ม (ไม่ใส่ = ใช้รูปแรก), widget: image, required: false }
+      - { name: layout, label: สัดส่วนรูปในอัลบั้ม, widget: select, options: [{ label: "สี่เหลี่ยมจัตุรัส (รูปถ่ายทั่วไป)", value: square }, { label: "แนวนอน 16:9 (สไลด์)", value: wide }], default: square, required: false }
       - { name: photos, label: รูปในอัลบั้ม (เลือกหลายรูปพร้อมกันได้), widget: image, multiple: true, required: false }

@@ -40,10 +40,10 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onKey));
     <h1 class="mt-2 text-3xl font-bold text-navy-800">{{ album.title }}</h1>
     <p v-if="album.description" class="mt-2 max-w-2xl text-slate-600">{{ album.description }}</p>
 
-    <ul v-if="photos.length" class="mt-8 grid grid-cols-2 gap-3 md:grid-cols-3 lg:grid-cols-4">
+    <ul v-if="photos.length" class="mt-8 grid gap-3" :class="album.layout === 'wide' ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-2 md:grid-cols-3 lg:grid-cols-4'">
       <li v-for="(p, i) in photos" :key="p">
         <button type="button" class="block w-full overflow-hidden rounded-xl bg-white shadow-sm hover:shadow-md" :aria-label="`ดูรูปที่ ${i + 1}`" @click="open = i">
-          <img :src="asset(p)" :alt="`${album.title} รูปที่ ${i + 1}`" loading="lazy" class="aspect-square w-full object-cover" />
+          <img :src="asset(p)" :alt="`${album.title} รูปที่ ${i + 1}`" loading="lazy" class="w-full object-cover" :class="album.layout === 'wide' ? 'aspect-video' : 'aspect-square'" />
         </button>
       </li>
     </ul>
