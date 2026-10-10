@@ -126,3 +126,11 @@ export const certificates = pgTable("certificates", {
   fileId: uuid("file_id").notNull().references(() => certFiles.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });
+
+// ข้อมูลเพิ่มของสมาชิกที่แอดมินนำเข้า (เช่น จากรายชื่อผู้เรียนรุ่นเก่า)
+export const memberProfiles = pgTable("member_profiles", {
+  userId: text("user_id").primaryKey().references(() => user.id, { onDelete: "cascade" }),
+  phone: text("phone"),
+  cohort: text("cohort"),
+  importedAt: timestamp("imported_at", { withTimezone: true }).notNull().defaultNow(),
+});

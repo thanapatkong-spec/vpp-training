@@ -37,6 +37,8 @@ function create(db: NonNullable<ReturnType<typeof useDb>>) {
         await sendMail({ to: u.email, subject: "ยืนยันอีเมล · VPP", ...mailBody("ยืนยันอีเมลเพื่อเริ่มใช้งานบัญชี VPP", url, "ยืนยันอีเมล") });
       },
     },
+    // สมาชิกที่แอดมินนำเข้าไว้ล่วงหน้า (ยังไม่มีรหัสผ่าน) เข้าด้วย Google อีเมลเดียวกันได้ทันที
+    account: { accountLinking: { enabled: true, trustedProviders: ["google"] } },
     socialProviders: googleId && googleSecret ? { google: { clientId: googleId, clientSecret: googleSecret } } : {},
   });
 }

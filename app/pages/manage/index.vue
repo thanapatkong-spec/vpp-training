@@ -79,6 +79,56 @@ async function reject(id: string) {
   }
 }
 
+// ---- นำเข้าสมาชิกจากไฟล์ Excel (อ่านในเบราว์เซอร์ ไฟล์ไม่ถูกอัปโหลดทั้งไฟล์) ----
+type Imp = { name: string; email: string; phone?: string; cohort: string };
+const impRows = ref<Imp[]>([]);
+const impMsg = ref("");
+const impResult = ref<{ dryRun: boolean; create: number; skipped: { name: string; reason: string }[] } | null>(null);
+const impBusy = ref(false);
+
+async function pickExcel(e: Event) {
+  impResult.value = null;
+  impMsg.value = "";
+  impRows.value = [];
+  const input = e.target as HTMLInputElement;
+  const f = input.files?.[0];
+  if (!f) return;
+  try {
+    const { default: readExcel } = await import("read-excel-file/browser");
+    const sheets = (await readExcel(f)) as unknown as { sheet: string; data: unknown[][] }[];
+    const out: Imp[] = [];
+    for (const sh of sheets) {
+      const m = /^VPP\s*(\d+)$/i.exec(sh.sheet.trim());
+      if (!m) continue; // เอาเฉพาะชีต "VPP 1", "VPP 2", ...
+      const head = (sh.data[0] || []).map((c) => String(c ?? "").trim());
+      const iName = head.indexOf("ชื่อ-สกุล"), iTel = head.indexOf("เบอร์โทรศัพท์"), iMail = head.indexOf("อีเมล");
+      if (iName < 0) continue;
+      for (const r of sh.data.slice(1)) {
+        const name = String(r[iName] ?? "").replace(/\s+/g, " ").trim();
+        if (!name) continue;
+        out.push({ name, email: String(r[iMail] ?? "").trim(), phone: String(r[iTel] ?? "").trim() || undefined, cohort: `รุ่นที่ ${m[1]}` });
+      }
+    }
+    impRows.value = out;
+    impMsg.value = out.length ? `อ่านได้ ${out.length} รายการ` : "ไม่พบชีตชื่อ VPP 1, VPP 2, ... ในไฟล์";
+  } catch {
+    impMsg.value = "อ่านไฟล์ไม่ได้ (ต้องเป็น .xlsx)";
+  } finally {
+    input.value = ""; // เลือกไฟล์เดิมซ้ำได้
+  }
+}
+async function runImport(dryRun: boolean) {
+  impBusy.value = true;
+  try {
+    impResult.value = await $fetch("/api/manage/members/import", { method: "POST", body: { dryRun, rows: impRows.value }, headers: authHeaders() });
+    if (!dryRun) impRows.value = [];
+  } catch (e: any) {
+    impMsg.value = e?.data?.message || "นำเข้าไม่สำเร็จ";
+  } finally {
+    impBusy.value = false;
+  }
+}
+
 const status = { pending: ["รอตรวจสอบ", "bg-amber-100 text-amber-800"], approved: ["อนุมัติแล้ว", "bg-green-100 text-green-800"], rejected: ["ไม่อนุมัติ", "bg-red-100 text-red-700"] } as const;
 const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" }) : "-");
 </script>
@@ -123,6 +173,23 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         </div>
       </li>
     </ul>
+
+    <section v-if="!forbidden" class="mt-12 rounded-3xl bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-bold text-navy-800">นำเข้าสมาชิกจากรายชื่อ (Excel)</h2>
+      <p class="mt-1 text-sm text-slate-600">เลือกไฟล์ .xlsx ที่มีชีต "VPP 1", "VPP 2", ... คอลัมน์ ชื่อ-สกุล / เบอร์โทรศัพท์ / อีเมล ระบบจะสร้างบัญชีสมาชิกที่ยังไม่มีรหัสผ่าน (ข้ามคนที่ไม่มีอีเมลหรือมีบัญชีแล้ว) สมาชิกเข้าสู่ระบบด้วย Google อีเมลเดียวกัน หรือใช้ "ลืมรหัสผ่าน" เพื่อตั้งรหัสผ่าน</p>
+      <input type="file" accept=".xlsx" class="mt-4 block text-sm" @change="pickExcel" />
+      <p v-if="impMsg" class="mt-2 text-sm text-slate-600">{{ impMsg }}</p>
+      <div v-if="impRows.length" class="mt-3 flex gap-2">
+        <button :disabled="impBusy" class="rounded-full border border-navy-800 px-5 py-2 text-sm text-navy-800 disabled:opacity-60" @click="runImport(true)">ตรวจสอบก่อน (ยังไม่สร้าง)</button>
+        <button :disabled="impBusy || !impResult || !impResult.dryRun || !impResult.create" class="btn-brand px-5 py-2 text-sm disabled:opacity-50" @click="runImport(false)">ยืนยันนำเข้า</button>
+      </div>
+      <div v-if="impResult" class="mt-3 text-sm">
+        <p class="font-semibold text-navy-800">{{ impResult.dryRun ? "ผลตรวจสอบ: จะสร้างสมาชิกใหม่" : "สร้างสมาชิกแล้ว" }} {{ impResult.create }} คน · ข้าม {{ impResult.skipped.length }} คน</p>
+        <ul class="mt-1 list-disc pl-5 text-slate-600">
+          <li v-for="(k, i) in impResult.skipped" :key="i">{{ k.name }}: {{ k.reason }}</li>
+        </ul>
+      </div>
+    </section>
   </main>
   <SiteFooter />
 </template>
