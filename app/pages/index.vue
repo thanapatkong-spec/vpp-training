@@ -55,13 +55,12 @@ const WHY = [
             สร้างทีมที่มีพื้นฐาน ลดภาระการสอนงาน ยกระดับมาตรฐานโรงพยาบาลสัตว์ พร้อมเป็นส่วนหนึ่งของทีมอย่างมั่นใจ
           </p>
           <div class="mt-7 flex flex-wrap gap-3">
-            <a href="#contact" class="btn-brand inline-flex items-center gap-2 px-6 py-3">สมัครเรียน / สอบถาม <ArrowRight class="size-5" /></a>
+            <a href="#contact" class="btn-brand px-6 py-3"><span class="inline-flex items-center gap-2 whitespace-nowrap">สมัครเรียน / สอบถาม <ArrowRight class="size-5" /></span></a>
             <a href="#cohorts" class="rounded-full border-2 border-navy-800 px-6 py-3 font-semibold text-navy-800 hover:bg-navy-800 hover:text-white">ดูตารางเรียน</a>
           </div>
         </div>
         <div class="relative mx-auto w-full max-w-md md:max-w-none">
-          <div class="absolute -inset-4 -z-0 rounded-[3rem] bg-gradient-to-br from-sky-card via-sky-soft to-white" aria-hidden="true" />
-          <img :src="asset('/hero.jpg')" alt="ทีมสัตวแพทย์และผู้ช่วยสัตวแพทย์กำลังดูแลสุนัข" class="relative aspect-[4/4.2] w-full rounded-[2.5rem] object-cover shadow-xl" />
+          <img :src="asset('/hero.jpg')" alt="ทีมสัตวแพทย์และผู้ช่วยสัตวแพทย์กำลังดูแลสุนัข" class="hero-photo relative aspect-[4/4.2] w-full object-cover" />
           <span class="float-badge -left-5 top-8"><PawPrint class="size-7 text-navy-700" /></span>
           <span class="float-badge -right-4 top-2"><ShieldPlus class="size-7 text-navy-700" /></span>
           <span class="float-badge -right-6 top-1/3"><Syringe class="size-7 text-navy-700" /></span>
@@ -72,6 +71,11 @@ const WHY = [
               <div class="font-semibold text-navy-800">ใบประกาศนียบัตร</div>
               <div class="text-xs text-slate-500">รับรองจากสัตวแพทยสภา</div>
             </div>
+          </div>
+          <div class="absolute -bottom-5 right-2 flex items-center gap-4 rounded-2xl bg-white/95 px-4 py-2.5 shadow-lg">
+            <img :src="asset('/partners/kachavet-logo.jpg')" alt="โรงพยาบาลสัตว์คชาเว็ท" class="h-14 w-auto object-contain" />
+            <span class="h-8 w-px bg-slate-200" aria-hidden="true" />
+            <img :src="asset('/partners/dr-john-logo.png')" alt="Dr.John Pet Ambulance" class="h-14 w-auto object-contain" />
           </div>
         </div>
       </div>
