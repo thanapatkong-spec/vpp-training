@@ -13,6 +13,7 @@ export default defineContentConfig({
         date: z.string(), // YYYY-MM-DD
         cohort: z.string().optional(),
         cover: z.string().optional(), // ไม่ใส่ = ใช้รูปแรก
+        layout: z.enum(["square", "wide"]).default("square"), // square = รูปถ่ายทั่วไป, wide = สไลด์/ภาพแนวนอน 16:9
         photos: z.array(z.string()).default([]),
       }),
     }),
