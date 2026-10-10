@@ -58,6 +58,12 @@ const WHY = [
             <a href="#contact" class="btn-brand px-6 py-3"><span class="inline-flex items-center gap-2 whitespace-nowrap">สมัครเรียน / สอบถาม <ArrowRight class="size-5" /></span></a>
             <a href="#cohorts" class="rounded-full border-2 border-navy-800 px-6 py-3 font-semibold text-navy-800 hover:bg-navy-800 hover:text-white">ดูตารางเรียน</a>
           </div>
+          <NuxtLink to="/collaboration" class="mt-8 inline-flex flex-wrap items-center gap-4 rounded-2xl bg-white/90 px-5 py-3 shadow-sm transition hover:shadow-md">
+            <span class="text-sm font-semibold text-navy-800">ความร่วมมือระหว่าง</span>
+            <img :src="asset('/partners/dr-john-logo.png')" alt="Dr.John Pet Ambulance" class="h-12 w-auto object-contain" />
+            <span class="h-8 w-px bg-slate-200" aria-hidden="true" />
+            <img :src="asset('/partners/kachavet-logo.jpg')" alt="โรงพยาบาลสัตว์คชาเว็ท" class="h-12 w-auto object-contain" />
+          </NuxtLink>
         </div>
         <div class="relative mx-auto w-full max-w-md md:max-w-none">
           <img :src="asset('/hero.jpg')" alt="ทีมสัตวแพทย์และผู้ช่วยสัตวแพทย์กำลังดูแลสุนัข" class="hero-photo relative aspect-[4/4.2] w-full object-cover" />
@@ -71,11 +77,6 @@ const WHY = [
               <div class="font-semibold text-navy-800">ใบประกาศนียบัตร</div>
               <div class="text-xs text-slate-500">รับรองจากสัตวแพทยสภา</div>
             </div>
-          </div>
-          <div class="absolute -bottom-5 right-2 flex items-center gap-4 rounded-2xl bg-white/95 px-4 py-2.5 shadow-lg">
-            <img :src="asset('/partners/kachavet-logo.jpg')" alt="โรงพยาบาลสัตว์คชาเว็ท" class="h-14 w-auto object-contain" />
-            <span class="h-8 w-px bg-slate-200" aria-hidden="true" />
-            <img :src="asset('/partners/dr-john-logo.png')" alt="Dr.John Pet Ambulance" class="h-14 w-auto object-contain" />
           </div>
         </div>
       </div>
