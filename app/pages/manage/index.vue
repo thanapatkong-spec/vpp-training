@@ -10,10 +10,25 @@ const rows = ref<Row[]>([]);
 const forbidden = ref(false);
 const loaded = ref(false);
 
+// รหัสแอดมินพิเศษ (เก็บในแท็บนี้เท่านั้น ปิดแท็บแล้วหาย)
+const adminKey = ref("");
+const keyInput = ref("");
+const authHeaders = () => (adminKey.value ? { "x-admin-key": adminKey.value } : undefined);
+onMounted(() => {
+  try { adminKey.value = sessionStorage.getItem("vpp-admin-key") || ""; } catch {}
+});
+async function submitKey() {
+  adminKey.value = keyInput.value.trim();
+  try { sessionStorage.setItem("vpp-admin-key", adminKey.value); } catch {}
+  forbidden.value = false;
+  await load();
+}
+
 async function load() {
   try {
-    rows.value = await $fetch<Row[]>("/api/manage/claims");
+    rows.value = await $fetch<Row[]>("/api/manage/claims", { headers: authHeaders() });
   } catch (e: any) {
+    rows.value = [];
     if (e?.status === 403 || e?.statusCode === 403) forbidden.value = true;
   }
   loaded.value = true;
@@ -42,7 +57,7 @@ async function approve(id: string) {
   if (issuedOn[id]) fd.append("issuedOn", issuedOn[id]);
   if (note[id]) fd.append("adminNote", note[id]);
   try {
-    await $fetch(`/api/manage/claims/${id}/approve`, { method: "POST", body: fd });
+    await $fetch(`/api/manage/claims/${id}/approve`, { method: "POST", body: fd, headers: authHeaders() });
     await load();
   } catch (e: any) {
     error.value[id] = e?.data?.message || "อนุมัติไม่สำเร็จ";
@@ -55,7 +70,7 @@ async function reject(id: string) {
   error.value[id] = "";
   busy.value = id;
   try {
-    await $fetch(`/api/manage/claims/${id}/reject`, { method: "POST", body: { adminNote: note[id] } });
+    await $fetch(`/api/manage/claims/${id}/reject`, { method: "POST", body: { adminNote: note[id] }, headers: authHeaders() });
     await load();
   } catch (e: any) {
     error.value[id] = e?.data?.message || "ดำเนินการไม่สำเร็จ";
@@ -72,7 +87,13 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
   <SiteHeader />
   <main class="mx-auto w-full max-w-4xl px-5 py-12">
     <h1 class="text-3xl font-bold text-navy-800">จัดการคำขอใบประกาศนียบัตร</h1>
-    <p v-if="forbidden" class="mt-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">หน้านี้สำหรับแอดมินเท่านั้น (อีเมลต้องอยู่ในรายชื่อแอดมินและยืนยันอีเมลแล้ว)</p>
+    <div v-if="forbidden" class="mt-6 rounded-2xl bg-red-50 px-4 py-4 text-sm text-red-700">
+      <p>หน้านี้สำหรับแอดมินเท่านั้น: อีเมลต้องอยู่ในรายชื่อแอดมิน และยืนยันอีเมลแล้ว หรือกรอกรหัสแอดมินด้านล่าง</p>
+      <form class="mt-3 flex flex-wrap gap-2" @submit.prevent="submitKey">
+        <input v-model="keyInput" type="password" autocomplete="off" class="field max-w-xs" placeholder="รหัสแอดมิน (ADMIN_KEY)" />
+        <button class="btn-brand px-5 py-2 text-sm">เข้าใช้งาน</button>
+      </form>
+    </div>
     <p v-else-if="loaded && !rows.length" class="mt-6 text-sm text-slate-500">ยังไม่มีคำขอ</p>
 
     <ul class="mt-6 space-y-4">

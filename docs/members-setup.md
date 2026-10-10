@@ -15,6 +15,7 @@
 | `BETTER_AUTH_SECRET` | สตริงสุ่มยาว ≥ 32 ตัวอักษร (เก็บเป็นความลับ) |
 | `BETTER_AUTH_URL` | URL จริงของเว็บ เช่น `https://vpp-training.vercel.app` |
 | `ADMIN_EMAILS` | อีเมลแอดมิน (คั่นด้วยจุลภาค) |
+| `ADMIN_KEY` | (ไม่บังคับ) รหัสแอดมินพิเศษ ≥12 ตัวอักษร ใช้เข้า `/manage` โดยไม่ต้องยืนยันอีเมล (อีเมลต้องอยู่ใน `ADMIN_EMAILS` ด้วย) |
 | `NUXT_PUBLIC_MEMBERS_ENABLED` | `true` |
 | `RESEND_API_KEY`, `MAIL_FROM` | ดูข้อ 4 |
 | `NUXT_PUBLIC_GOOGLE_LOGIN`, `GOOGLE_CLIENT_ID`, `GOOGLE_CLIENT_SECRET` | ดูข้อ 3 |

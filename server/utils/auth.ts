@@ -1,5 +1,6 @@
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
+import { timingSafeEqual } from "node:crypto";
 import type { H3Event } from "h3";
 import { account, session, user, verification } from "../db/schema";
 import { useDb } from "./db";
@@ -53,13 +54,26 @@ const adminEmails = () =>
 export const isAdminUser = (u: { email: string; emailVerified: boolean }) =>
   u.emailVerified && adminEmails().includes(u.email.toLowerCase());
 
+export const isAdminCandidate = (email: string) => adminEmails().includes(email.toLowerCase());
+
+// รหัสแอดมินพิเศษ (ADMIN_KEY): ใช้แทนการยืนยันอีเมลได้ โดยอีเมลต้องอยู่ใน ADMIN_EMAILS ด้วย และต้องส่งรหัสมาทาง header x-admin-key
+function adminKeyOk(event: H3Event) {
+  const expected = process.env.ADMIN_KEY || "";
+  const given = String(getRequestHeader(event, "x-admin-key") || "");
+  if (expected.length < 12 || !given) return false;
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 export async function requireUser(event: H3Event) {
   // ใช้เฉพาะ header (ห้ามเรียก toWebRequest ที่นี่ เพราะจะอ่าน body ไปก่อนและทำให้ readBody ค้าง)
   const headers = new Headers();
   for (const [k, v] of Object.entries(getRequestHeaders(event))) if (v) headers.set(k, v);
   const s = await useAuth().api.getSession({ headers });
   if (!s) throw createError({ statusCode: 401, message: "กรุณาเข้าสู่ระบบ" });
-  return { ...s.user, isAdmin: isAdminUser(s.user) };
+  const isAdmin = isAdminUser(s.user) || (isAdminCandidate(s.user.email) && adminKeyOk(event));
+  return { ...s.user, isAdmin };
 }
 
 export async function requireAdmin(event: H3Event) {
