@@ -11,7 +11,11 @@ type Detail = Record<string, any> & { files: FileMeta[] };
 
 const rows = ref<Row[]>([]);
 const statusFilter = ref("submitted");
+const cohortFilter = ref("");
 const q = ref("");
+const cohorts = useCohortList();
+const cohortName = (id: string) => cohorts.value.find((c) => c.id === id)?.name || id;
+const usedCohorts = computed(() => [...new Set(rows.value.map((r) => r.cohortId))]);
 const openId = ref("");
 const detail = ref<Detail | null>(null);
 const review = reactive<{ note: string; files: Record<string, { status: string; note: string }> }>({ note: "", files: {} });
@@ -20,7 +24,7 @@ const msg = ref<{ ok: boolean; text: string } | null>(null);
 
 const shown = computed(() => {
   const k = q.value.trim().toLowerCase();
-  return rows.value.filter((r) => (!statusFilter.value || r.status === statusFilter.value) && (!k || [r.firstName, r.lastName, r.email, r.phone, r.workplace].some((v) => (v || "").toLowerCase().includes(k))));
+  return rows.value.filter((r) => (!statusFilter.value || r.status === statusFilter.value) && (!cohortFilter.value || r.cohortId === cohortFilter.value) && (!k || [r.firstName, r.lastName, r.email, r.phone, r.workplace].some((v) => (v || "").toLowerCase().includes(k))));
 });
 const count = (s: string) => rows.value.filter((r) => r.status === s).length;
 
@@ -72,7 +76,7 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
 const csvCell = (v: unknown) => `"${String(v ?? "").replace(/"/g, '""')}"`;
 function exportCsv() {
   const head = ["ชื่อ", "นามสกุล", "อีเมล", "เบอร์โทร", "สถานที่ทำงาน", "รุ่น", "แพ็กเกจ", "สถานะ", "ส่งเมื่อ"];
-  const body = shown.value.map((r) => [r.prefix + r.firstName, r.lastName, r.email, r.phone, r.workplace, r.cohortId, pkgName(r.packageId), APP_STATUS[r.status]?.[0], fmt(r.updatedAt)].map(csvCell).join(","));
+  const body = shown.value.map((r) => [r.prefix + r.firstName, r.lastName, r.email, r.phone, r.workplace, cohortName(r.cohortId), pkgName(r.packageId), APP_STATUS[r.status]?.[0], fmt(r.updatedAt)].map(csvCell).join(","));
   const a = document.createElement("a");
   a.href = URL.createObjectURL(new Blob(["﻿" + [head.join(","), ...body].join("\n")], { type: "text/csv;charset=utf-8" }));
   a.download = "applications.csv";
@@ -91,6 +95,10 @@ onMounted(load);
     </div>
     <div class="mt-3 flex flex-wrap gap-2">
       <input v-model="q" class="field max-w-xs" placeholder="ค้นหาชื่อ / อีเมล / เบอร์ / ที่ทำงาน" />
+      <select v-if="usedCohorts.length > 1" v-model="cohortFilter" class="field max-w-[14rem]">
+        <option value="">ทุกรุ่น</option>
+        <option v-for="id in usedCohorts" :key="id" :value="id">{{ cohortName(id) }}</option>
+      </select>
       <button class="rounded-full border border-navy-800 px-4 py-2 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="exportCsv">ส่งออก CSV</button>
     </div>
     <p v-if="msg" class="mt-3 text-sm" :class="msg.ok ? 'text-green-700' : 'text-red-700'">{{ msg.text }}</p>
@@ -98,7 +106,7 @@ onMounted(load);
     <ul class="mt-4 divide-y divide-sky-card">
       <li v-for="r in shown" :key="r.id">
         <button class="flex w-full flex-wrap items-center justify-between gap-2 py-3 text-left" @click="toggle(r)">
-          <span><b class="text-navy-800">{{ r.prefix }}{{ r.firstName }} {{ r.lastName }}</b> <span class="text-xs text-slate-500">· {{ r.workplace || "ไม่ระบุที่ทำงาน" }} · {{ pkgName(r.packageId) }} · {{ fmt(r.updatedAt) }}</span></span>
+          <span><b class="text-navy-800">{{ r.prefix }}{{ r.firstName }} {{ r.lastName }}</b> <span class="text-xs text-slate-500">· {{ r.workplace || "ไม่ระบุที่ทำงาน" }} · {{ cohortName(r.cohortId) }} · {{ pkgName(r.packageId) }} · {{ fmt(r.updatedAt) }}</span></span>
           <span class="flex gap-1">
             <span v-if="r.payStatus === 'paid'" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ชำระแล้ว</span>
             <span v-else-if="r.payStatus === 'pending'" class="rounded-full bg-amber-500 px-3 py-0.5 text-xs font-semibold text-white">สลิปรอตรวจ</span>
@@ -115,7 +123,7 @@ onMounted(load);
               <div><dt class="text-xs text-slate-500">ที่อยู่</dt><dd class="whitespace-pre-line">{{ detail.address || "-" }}</dd></div>
               <div><dt class="text-xs text-slate-500">วุฒิการศึกษา</dt><dd>{{ detail.education }}<span v-if="detail.school"> · {{ detail.school }}</span></dd></div>
               <div><dt class="text-xs text-slate-500">ที่ทำงาน</dt><dd>{{ detail.workplace || "-" }}<span v-if="detail.position"> · {{ detail.position }}</span><span v-if="detail.experienceYears != null"> · {{ detail.experienceYears }} ปี</span></dd></div>
-              <div><dt class="text-xs text-slate-500">รุ่น / แพ็กเกจ / ผู้ชำระ</dt><dd>{{ detail.cohortId }} · {{ pkgName(detail.packageId) }} · {{ detail.payer === "employer" ? `นายจ้าง: ${detail.invoiceName}${detail.invoiceTaxId ? ` (${detail.invoiceTaxId})` : ""}` : "ชำระเอง" }}</dd></div>
+              <div><dt class="text-xs text-slate-500">รุ่น / แพ็กเกจ / ผู้ชำระ</dt><dd>{{ cohortName(detail.cohortId) }} · {{ pkgName(detail.packageId) }} · {{ detail.payer === "employer" ? `นายจ้าง: ${detail.invoiceName}${detail.invoiceTaxId ? ` (${detail.invoiceTaxId})` : ""}` : "ชำระเอง" }}</dd></div>
             </dl>
             <p class="mt-4 font-semibold text-navy-800">เอกสาร</p>
             <ul class="mt-2 space-y-2">

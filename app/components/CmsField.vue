@@ -113,7 +113,11 @@ function newRow() {
       <div v-for="(row, i) in modelValue || []" :key="i" class="space-y-3 rounded-2xl bg-sky-soft p-4">
         <CmsField v-for="f in field.fields" :key="f.name" :field="f" :model-value="row[f.name]" :auth-headers="authHeaders"
           @update:model-value="set((modelValue || []).map((r: any, k: number) => (k === i ? { ...r, [f.name]: $event } : r)))" />
-        <button type="button" class="text-xs text-red-600 hover:underline" @click="set((modelValue || []).filter((_: any, k: number) => k !== i))">ลบแถวนี้</button>
+        <div class="flex gap-4 text-xs">
+          <button v-if="i > 0" type="button" class="text-navy-800 hover:underline" @click="move(i, -1)">↑ เลื่อนขึ้น</button>
+          <button v-if="i < (modelValue || []).length - 1" type="button" class="text-navy-800 hover:underline" @click="move(i, 1)">↓ เลื่อนลง</button>
+          <button type="button" class="text-red-600 hover:underline" @click="set((modelValue || []).filter((_: any, k: number) => k !== i))">ลบแถวนี้</button>
+        </div>
       </div>
       <button type="button" class="rounded-full border border-navy-800 px-4 py-1.5 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="set([...(modelValue || []), newRow()])">+ เพิ่มรายการ</button>
     </div>

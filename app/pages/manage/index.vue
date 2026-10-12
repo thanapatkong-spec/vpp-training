@@ -256,6 +256,27 @@ async function pickExcel(e: Event) {
     input.value = ""; // เลือกไฟล์เดิมซ้ำได้
   }
 }
+// เพิ่มสมาชิกทีละคน (ใช้ระบบเดียวกับนำเข้า Excel: ข้ามถ้ามีบัญชี/ชื่อซ้ำ)
+const one = reactive({ name: "", email: "", phone: "", cohort: "" });
+const oneBusy = ref(false);
+const oneMsg = ref<{ ok: boolean; text: string } | null>(null);
+async function addOne() {
+  oneMsg.value = null;
+  if (!one.name.trim()) return (oneMsg.value = { ok: false, text: "กรุณากรอกชื่อ-สกุล" });
+  oneBusy.value = true;
+  try {
+    const r = await $fetch<{ create: number; skipped: { reason: string }[] }>("/api/manage/members/import", { method: "POST", body: { dryRun: false, rows: [{ ...one }] }, headers: authHeaders() });
+    if (r.create) {
+      oneMsg.value = { ok: true, text: `เพิ่ม ${one.name.trim()} แล้ว${one.email.trim() ? "" : " (ยังไม่มีอีเมล เติมทีหลังได้ในรายชื่อด้านล่าง)"}` };
+      Object.assign(one, { name: "", email: "", phone: "" });
+      loadMembers();
+    } else oneMsg.value = { ok: false, text: `ไม่ได้เพิ่ม: ${r.skipped[0]?.reason || "ข้อมูลไม่ถูกต้อง"}` };
+  } catch (e: any) {
+    oneMsg.value = { ok: false, text: e?.data?.message || "เพิ่มไม่สำเร็จ" };
+  } finally {
+    oneBusy.value = false;
+  }
+}
 async function runImport(dryRun: boolean) {
   impBusy.value = true;
   try {
@@ -290,11 +311,12 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
       </form>
     </div>
     <nav v-if="!forbidden" class="mt-6 flex flex-wrap gap-2 text-sm font-semibold">
-      <button v-for="t in ([['applications', 'ใบสมัคร'], ['members', 'สมาชิกและใบประกาศ'], ...(rows.length ? [['claims', `คำขอเดิมจากสมาชิก${rows.some((r) => r.status === 'pending') ? ` (${rows.filter((r) => r.status === 'pending').length})` : ''}`]] : []), ['content', 'เนื้อหาเว็บ']] as const)" :key="t[0]"
+      <button v-for="t in ([['applications', 'ใบสมัคร'], ['payments', 'ตรวจการชำระเงิน'], ['members', 'สมาชิกและใบประกาศ'], ...(rows.length ? [['claims', `คำขอเดิมจากสมาชิก${rows.some((r) => r.status === 'pending') ? ` (${rows.filter((r) => r.status === 'pending').length})` : ''}`]] : []), ['content', 'เนื้อหาเว็บ']] as const)" :key="t[0]"
         class="rounded-full px-5 py-2" :class="tab === t[0] ? 'bg-navy-800 text-white' : 'bg-white text-navy-800 shadow-sm'" @click="tab = t[0]">{{ t[1] }}</button>
     </nav>
 
     <ApplicationsAdmin v-if="!forbidden && tab === 'applications'" :auth-headers="authHeaders" />
+    <PaymentsAdmin v-if="!forbidden && tab === 'payments'" :auth-headers="authHeaders" />
     <CmsEditor v-if="!forbidden && tab === 'content'" :auth-headers="authHeaders" />
     <p v-if="!forbidden && tab === 'content'" class="mt-6 text-xs text-slate-500">ต้องตั้งค่า <code>GITHUB_TOKEN</code> บน Vercel ก่อนใช้งาน (ดู docs/members-setup.md) · หน้าจัดการแบบเดิม (สำรอง): <a :href="asset('/admin/')" target="_blank" class="underline">/admin/</a></p>
 
@@ -326,6 +348,22 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         </div>
       </li>
     </ul>
+
+    <section v-if="!forbidden && tab === 'members'" class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-bold text-navy-800">เพิ่มสมาชิกทีละคน</h2>
+      <p class="mt-1 text-sm text-slate-600">สร้างบัญชีที่ยังไม่มีรหัสผ่าน แล้วส่ง "ลิงก์เปิดใช้งาน" ให้สมาชิก (ปุ่มจัดการในรายชื่อด้านล่าง) หรือให้เข้าด้วย Google อีเมลเดียวกัน</p>
+      <form class="mt-4 grid gap-3 md:grid-cols-4" @submit.prevent="addOne">
+        <input v-model="one.name" class="field" placeholder="ชื่อ-สกุล *" />
+        <input v-model="one.email" type="email" class="field" placeholder="อีเมล (ไม่บังคับ)" />
+        <input v-model="one.phone" inputmode="tel" class="field" placeholder="เบอร์โทร" />
+        <input v-model="one.cohort" class="field" list="member-cohorts" placeholder="รุ่น เช่น VPP 1" />
+        <datalist id="member-cohorts"><option v-for="c in cohorts" :key="c" :value="c" /></datalist>
+        <div class="flex flex-wrap items-center gap-3 md:col-span-4">
+          <button :disabled="oneBusy" class="btn-brand px-6 py-2.5 text-sm disabled:opacity-60">{{ oneBusy ? "กำลังเพิ่ม..." : "+ เพิ่มสมาชิก" }}</button>
+          <span v-if="oneMsg" class="text-sm" :class="oneMsg.ok ? 'text-green-700' : 'text-red-700'">{{ oneMsg.text }}</span>
+        </div>
+      </form>
+    </section>
 
     <section v-if="!forbidden && tab === 'members'" class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
       <h2 class="text-xl font-bold text-navy-800">นำเข้าสมาชิกจากรายชื่อ (Excel)</h2>

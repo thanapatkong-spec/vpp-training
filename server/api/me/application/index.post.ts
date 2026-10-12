@@ -13,6 +13,13 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 409, message: cur.status === "approved" ? "ใบสมัครของคุณผ่านการตรวจสอบแล้ว" : "ส่งใบสมัครแล้ว กรุณารอแอดมินตรวจสอบ" });
   }
 
+  // รุ่นต้องเปิดรับสมัครอยู่ (ยกเว้นส่งแก้ไขใบสมัครเดิมในรุ่นเดิม)
+  const cohort = await getCohort(event, values.cohortId);
+  const sameAsBefore = cur?.status === "needs_changes" && cur.cohortId === values.cohortId;
+  if (!cohort || (cohort.status !== "open" && !sameAsBefore)) {
+    throw createError({ statusCode: 422, message: "รุ่นที่เลือกปิดรับสมัครแล้ว กรุณาเลือกรุ่นอื่น", data: { fieldErrors: { cohortId: "รุ่นนี้ปิดรับสมัครแล้ว" } } });
+  }
+
   if (cur && cur.status === "needs_changes") {
     // ต้องแนบใหม่เฉพาะเอกสารที่ถูกตีกลับ (หรือยังไม่มี)
     const existing = await db.select({ id: applicationFiles.id, kind: applicationFiles.kind, status: applicationFiles.status }).from(applicationFiles).where(eq(applicationFiles.applicationId, cur.id));

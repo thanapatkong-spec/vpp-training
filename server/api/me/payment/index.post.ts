@@ -20,7 +20,7 @@ export default defineEventHandler(async (event) => {
   const type = d[0] === 0xff && d[1] === 0xd8 ? "image/jpeg" : d.subarray(0, 8).toString("hex") === "89504e470d0a1a0a" ? "image/png" : "";
   if (!type) throw createError({ statusCode: 422, message: "สลิปต้องเป็นรูป JPG หรือ PNG (บันทึกภาพสลิปจากแอปธนาคาร)" });
 
-  const amount = priceOf(app.packageId);
+  const amount = await priceOf(event, app.cohortId, app.packageId);
   const r = await verifySlip(d, type, amount);
   const base = { applicationId: app.id, amount, slipName: slip.filename || "slip", slipType: type, slipData: d };
 

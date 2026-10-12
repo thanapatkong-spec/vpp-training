@@ -21,6 +21,7 @@ export interface CmsCollection {
   ext?: "md" | "yml";
   files?: { name: string; label: string }[]; // kind=files: ไฟล์ใน content/pages
   titleField: string;
+  slugHint?: string; // คำอธิบายช่องชื่อไฟล์ตอนสร้างใหม่
   sortField?: string;
   sortDir?: "asc" | "desc";
   fields: CmsField[];
@@ -39,7 +40,50 @@ const pageFields: CmsField[] = [
   bodyF,
 ];
 
+const priceF = (name: string, label: string): CmsField => ({ name, label, type: "number", required: true, hint: "บาท/คน ใส่เฉพาะตัวเลข" });
+
 export const CMS_COLLECTIONS: CmsCollection[] = [
+  {
+    name: "cohorts", label: "รุ่นที่เปิดรับสมัคร", singular: "รุ่น", kind: "folder", dir: "content/cohorts", ext: "yml",
+    titleField: "name", sortField: "order", sortDir: "asc",
+    slugHint: "รหัสรุ่น เช่น 2570-03 (ปี-เดือนที่เริ่มเรียน) ใช้อ้างอิงในใบสมัคร ตั้งครั้งเดียวแก้ภายหลังไม่ได้",
+    fields: [
+      stringF("name", "ชื่อรุ่น (ป้ายสีส้ม)", true, "เช่น รุ่นที่เปิดรับบัตร / รุ่นที่ 5"),
+      {
+        name: "status", label: "สถานะ", type: "select", default: "open", required: true,
+        options: [
+          { label: "เปิดรับสมัคร (แสดงปุ่มสมัคร)", value: "open" },
+          { label: "เต็มแล้ว (แสดงบนเว็บ แต่สมัครไม่ได้)", value: "full" },
+          { label: "ปิดรับสมัคร (แสดงบนเว็บ แต่สมัครไม่ได้)", value: "closed" },
+          { label: "ซ่อน (ไม่แสดงบนเว็บ)", value: "hidden" },
+        ],
+      },
+      { name: "seats", label: "จำนวนที่นั่ง", type: "number", required: false, hint: "แสดงเป็น \"เปิดรับสมัคร · 30 ที่นั่ง\" ไม่ใส่ = ไม่แสดงจำนวน" },
+      stringF("dates", "ช่วงวันเรียนแบบสั้น (แสดงในฟอร์มสมัคร)", false, "เช่น 4–5 และ 11–12 พฤศจิกายน 2569"),
+      priceF("priceTheory", "ราคาภาคทฤษฎี"),
+      priceF("pricePractical", "ราคาภาคปฏิบัติ"),
+      { ...priceF("priceBundle", "ราคาแพ็กเกจครบ 2 ภาค"), hint: "ส่วนลด (ประหยัด X บาท) คำนวณจาก ทฤษฎี + ปฏิบัติ − ราคานี้ ให้อัตโนมัติ" },
+      {
+        name: "sessions", label: "ตารางเรียน (กล่องในการ์ดรุ่น เรียงตามลำดับ)", type: "list", required: false,
+        fields: [
+          {
+            name: "icon", label: "ไอคอน", type: "select", default: "theory",
+            options: [
+              { label: "💻 ภาคทฤษฎี / ออนไลน์", value: "theory" },
+              { label: "📄 สอบ", value: "exam" },
+              { label: "🏥 ภาคปฏิบัติ / โรงพยาบาล", value: "practical" },
+              { label: "📅 อื่น ๆ", value: "other" },
+            ],
+          },
+          stringF("title", "หัวข้อ", true, "เช่น ภาคทฤษฎี (ออนไลน์สด)"),
+          stringF("date", "วันที่ (บรรทัดไอคอนปฏิทิน)", false, "เช่น วันที่ 4–5 และ 11–12 พฤศจิกายน 2569"),
+          stringF("time", "เวลา/สถานที่ (บรรทัดไอคอนนาฬิกา)", false, "เช่น 09:00–16:00 น. (พักเที่ยง 12:00–13:00)"),
+          stringF("extra", "หมายเหตุ (บรรทัดไอคอนหมวกบัณฑิต)", false, "เช่น สอบปฏิบัติทันทีหลังเรียนจบ"),
+        ],
+      },
+      { ...orderF, label: "ลำดับการแสดง (เลขน้อยขึ้นก่อน)" },
+    ],
+  },
   {
     name: "articles", label: "บทความ", singular: "บทความ", kind: "folder", dir: "content/articles", ext: "md",
     titleField: "title", sortField: "date", sortDir: "desc",

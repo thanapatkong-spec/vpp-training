@@ -8,16 +8,16 @@ export default defineEventHandler(async (event) => {
   const db = useDb()!;
   const [app] = await db.select().from(applications).where(eq(applications.userId, u.id)).orderBy(desc(applications.createdAt)).limit(1);
   if (!app) return null;
-  const files = await db
-    .select({ id: applicationFiles.id, kind: applicationFiles.kind, name: applicationFiles.name, status: applicationFiles.status, note: applicationFiles.note })
-    .from(applicationFiles)
-    .where(eq(applicationFiles.applicationId, app.id));
-  const pays = await db
-    .select({ id: payments.id, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, createdAt: payments.createdAt, paidAt: payments.paidAt })
-    .from(payments)
-    .where(eq(payments.applicationId, app.id))
-    .orderBy(desc(payments.createdAt));
-  const amount = priceOf(app.packageId);
+  const [files, pays, amount] = await Promise.all([
+    db.select({ id: applicationFiles.id, kind: applicationFiles.kind, name: applicationFiles.name, status: applicationFiles.status, note: applicationFiles.note })
+      .from(applicationFiles)
+      .where(eq(applicationFiles.applicationId, app.id)),
+    db.select({ id: payments.id, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, createdAt: payments.createdAt, paidAt: payments.paidAt })
+      .from(payments)
+      .where(eq(payments.applicationId, app.id))
+      .orderBy(desc(payments.createdAt)),
+    priceOf(event, app.cohortId, app.packageId),
+  ]);
   const qr = paymentQr(amount);
   return {
     ...app,

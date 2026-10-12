@@ -3,6 +3,24 @@ import { z } from "zod";
 
 export default defineContentConfig({
   collections: {
+    // รุ่นที่เปิดรับสมัคร + ราคา — แก้ในหน้าแอดมิน (ไฟล์ content/cohorts/<รหัสรุ่น>.yml, ชื่อไฟล์ = รหัสรุ่นที่ใบสมัครอ้างถึง)
+    cohorts: defineCollection({
+      type: "data",
+      source: "cohorts/*.yml",
+      schema: z.object({
+        name: z.string(),
+        status: z.enum(["open", "full", "closed", "hidden"]).default("open"),
+        seats: z.number().optional(),
+        dates: z.string().optional(),
+        order: z.number().default(100),
+        priceTheory: z.number(),
+        pricePractical: z.number(),
+        priceBundle: z.number(),
+        sessions: z
+          .array(z.object({ icon: z.enum(["theory", "exam", "practical", "other"]).default("other"), title: z.string(), date: z.string().optional(), time: z.string().optional(), extra: z.string().optional() }))
+          .default([]),
+      }),
+    }),
     // อัลบั้มรูป — แก้ผ่าน /admin/ (ไฟล์ content/albums/*.yml, รูปอยู่ใน public/uploads/)
     albums: defineCollection({
       type: "data",

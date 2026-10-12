@@ -1,13 +1,18 @@
 <script setup lang="ts">
 import { CheckCircle2, Mail } from "lucide-vue-next";
 import { APP_DOCS, APP_STATUS, APPLY_PACKAGES, ApplicationInput, EDUCATION, PREFIXES, validThaiId, type AppDocKind } from "#shared/application";
-import { COHORT, PACKAGES, baht } from "#shared/config";
+import { baht } from "#shared/config";
+import { cohortPackages } from "#shared/cohorts";
 
 useHead({ title: "สมัครเรียน VPP · VPP" });
 const auth = useAuthClient();
 const sessionState = auth.useSession();
 const session = computed(() => sessionState.value.data);
 const isPending = computed(() => sessionState.value.isPending);
+const route = useRoute();
+const cohorts = await useCohorts({ api: true });
+const openCohorts = computed(() => cohorts.value.filter((c) => c.status === "open"));
+const firstCohort = () => openCohorts.value.find((c) => c.id === route.query.cohort)?.id || openCohorts.value[0]?.id || "";
 
 type Pay = { id: string; amount: number; status: string; note: string | null; transRef: string | null; createdAt: string; paidAt: string | null };
 type Existing = { id: string; status: string; adminNote: string | null; files: { id: string; kind: string; name: string; status: string; note: string | null }[]; payment?: { amount: number; paid: boolean; pending: boolean; history: Pay[]; promptpay: { payload: string; name: string } | null; autoCheck: boolean } } & Record<string, any>;
@@ -16,7 +21,7 @@ const loaded = ref(false);
 
 const DRAFT_KEY = "vpp-apply-draft";
 const blank = () => ({
-  cohortId: COHORT.id, packageId: "bundle", prefix: "", firstName: "", lastName: "", nationalId: "", birthDate: "", phone: "", lineId: "", address: "",
+  cohortId: firstCohort(), packageId: "bundle", prefix: "", firstName: "", lastName: "", nationalId: "", birthDate: "", phone: "", lineId: "", address: "",
   education: "", school: "", workplace: "", position: "", experienceYears: "" as string | number,
   payer: "self", invoiceName: "", invoiceAddress: "", invoiceTaxId: "", consent: false,
 });
@@ -54,6 +59,7 @@ async function load() {
       const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null");
       if (d) Object.assign(f, d, { consent: false });
     } catch {}
+    if (route.query.cohort || !openCohorts.value.some((c) => c.id === f.cohortId)) f.cohortId = firstCohort(); // ลิงก์ "สมัครรุ่นนี้" / รุ่นในร่างปิดรับแล้ว
     if (!f.firstName && session.value?.user.name) {
       const [a, ...b] = session.value.user.name.trim().split(/\s+/);
       f.firstName = a || "";
@@ -143,8 +149,13 @@ async function submit() {
   }
 }
 
-const pkg = computed(() => PACKAGES.find((p) => p.id === f.packageId));
-const applyPackages = APPLY_PACKAGES.map((id) => PACKAGES.find((p) => p.id === id)!);
+// รุ่นที่เลือกได้: รุ่นที่เปิดรับ + รุ่นเดิมของใบสมัครที่ขอแก้ไข (แม้ปิดรับแล้ว)
+const cohortChoices = computed(() => cohorts.value.filter((c) => c.status === "open" || c.id === existing.value?.cohortId));
+const selCohort = computed(() => cohorts.value.find((c) => c.id === f.cohortId));
+const headCohort = computed(() => selCohort.value ?? openCohorts.value[0]);
+const packages = computed(() => cohortPackages(selCohort.value));
+const pkg = computed(() => packages.value.find((p) => p.id === f.packageId));
+const applyPackages = computed(() => APPLY_PACKAGES.map((id) => packages.value.find((p) => p.id === id)!));
 
 // ---- ชำระค่าเรียน (พร้อมเพย์ + สลิป) ----
 const qrSrc = ref("");
@@ -182,14 +193,14 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
   <SiteHeader />
   <main class="mx-auto w-full max-w-3xl px-5 py-12">
     <h1 class="text-3xl font-bold text-navy-800">สมัครเรียนหลักสูตร VPP</h1>
-    <p class="mt-1 text-sm text-slate-600">หลักสูตรผู้ช่วยสัตวแพทย์ด้านการพยาบาลสัตว์ · {{ COHORT.name }} ({{ COHORT.registerLabel }})</p>
+    <p class="mt-1 text-sm text-slate-600">หลักสูตรผู้ช่วยสัตวแพทย์ด้านการพยาบาลสัตว์<template v-if="headCohort"> · {{ headCohort.name }}{{ headCohort.dates ? ` (${headCohort.dates})` : "" }}</template></p>
 
     <!-- ยังไม่ล็อกอิน -->
     <section v-if="loaded && !session" class="mt-8 rounded-3xl bg-white p-6 shadow-sm">
       <p class="text-slate-700">กรุณาสมัครสมาชิกหรือเข้าสู่ระบบก่อน เพื่อบันทึกใบสมัครและติดตามสถานะได้</p>
       <div class="mt-4 flex flex-wrap gap-3">
-        <NuxtLink to="/signup?next=/apply" class="btn-brand px-6 py-2.5 text-sm">สมัครสมาชิก</NuxtLink>
-        <NuxtLink to="/login?next=/apply" class="rounded-full border-2 border-navy-800 px-6 py-2.5 text-sm font-semibold text-navy-800">เข้าสู่ระบบ</NuxtLink>
+        <NuxtLink :to="`/signup?next=${encodeURIComponent(route.fullPath)}`" class="btn-brand px-6 py-2.5 text-sm">สมัครสมาชิก</NuxtLink>
+        <NuxtLink :to="`/login?next=${encodeURIComponent(route.fullPath)}`" class="rounded-full border-2 border-navy-800 px-6 py-2.5 text-sm font-semibold text-navy-800">เข้าสู่ระบบ</NuxtLink>
       </div>
     </section>
 
@@ -246,6 +257,12 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
       </div>
     </section>
 
+    <!-- ไม่มีรุ่นเปิดรับ -->
+    <section v-else-if="loaded && editable && !cohortChoices.length" class="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+      <p class="font-semibold text-navy-800">ยังไม่มีรุ่นที่เปิดรับสมัครในขณะนี้</p>
+      <p class="mt-1 text-sm text-slate-600">ติดตามรุ่นถัดไปได้ที่หน้าแรก หรือสอบถามทีมงานทาง LINE @dr.john</p>
+    </section>
+
     <!-- ฟอร์ม -->
     <template v-else-if="loaded && editable">
       <p v-if="existing?.status === 'needs_changes'" class="mt-6 rounded-2xl bg-orange-50 px-4 py-3 text-sm text-orange-800">ทีมงานขอให้แก้ไข: {{ existing.adminNote || "ดูเอกสารที่ถูกตีกลับในขั้นที่ 4" }}</p>
@@ -291,11 +308,14 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
         <!-- 3 -->
         <div v-show="step === 3" class="space-y-4">
           <div>
-            <p class="text-xs text-slate-600">รุ่นที่สมัคร</p>
-            <label class="mt-1 flex items-center gap-3 rounded-2xl border-2 border-navy-800 px-4 py-3 text-sm">
-              <input v-model="f.cohortId" type="radio" :value="COHORT.id" />
-              <span><b class="text-navy-800">{{ COHORT.name }}</b> · {{ COHORT.registerLabel }}</span>
-            </label>
+            <p class="text-xs text-slate-600">รุ่นที่สมัคร *</p>
+            <div class="mt-1 space-y-2">
+              <label v-for="c in cohortChoices" :key="c.id" class="flex cursor-pointer items-center gap-3 rounded-2xl border-2 px-4 py-3 text-sm" :class="f.cohortId === c.id ? 'border-navy-800' : 'border-sky-card'">
+                <input v-model="f.cohortId" type="radio" :value="c.id" />
+                <span><b class="text-navy-800">{{ c.name }}</b>{{ c.dates ? ` · ${c.dates}` : "" }}</span>
+              </label>
+            </div>
+            <span v-if="errors.cohortId" class="err">{{ errors.cohortId }}</span>
           </div>
           <div>
             <p class="text-xs text-slate-600">แพ็กเกจ *</p>
@@ -345,7 +365,8 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
             <div><dt class="text-xs text-slate-500">เบอร์โทร</dt><dd>{{ f.phone }}</dd></div>
             <div><dt class="text-xs text-slate-500">วุฒิการศึกษา</dt><dd>{{ f.education }}</dd></div>
             <div><dt class="text-xs text-slate-500">สถานที่ทำงาน</dt><dd>{{ f.workplace || "-" }}</dd></div>
-            <div><dt class="text-xs text-slate-500">แพ็กเกจ</dt><dd>{{ pkg?.short }}</dd></div>
+            <div><dt class="text-xs text-slate-500">รุ่น</dt><dd>{{ selCohort?.name || f.cohortId }}</dd></div>
+            <div><dt class="text-xs text-slate-500">แพ็กเกจ</dt><dd>{{ pkg?.short }}{{ pkg ? ` · ${baht(pkg.price)} บาท` : "" }}</dd></div>
             <div class="md:col-span-2"><dt class="text-xs text-slate-500">เอกสาร</dt><dd>{{ APP_DOCS.map((d) => `${d.label}: ${files[d.kind]?.name || (fileState(d.kind) && !needsFile(d.kind) ? "ใช้ไฟล์เดิม" : "-")}`).join(" · ") }}</dd></div>
           </dl>
           <label class="flex items-start gap-2 text-xs text-slate-600">

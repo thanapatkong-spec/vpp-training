@@ -38,6 +38,13 @@ function blank() {
   for (const f of col.value.fields) v[f.name] = f.default ?? (f.type === "images" || f.type === "list" ? [] : f.type === "date" ? new Date().toISOString().slice(0, 10) : "");
   return v;
 }
+// เริ่มรายการใหม่จากข้อมูลที่เปิดอยู่ (เช่น รุ่นถัดไปที่ตารางคล้ายเดิม)
+function duplicate() {
+  editing.value = { slug: "", isNew: true };
+  newSlug.value = "";
+  values.value = JSON.parse(JSON.stringify(values.value));
+  msg.value = { ok: true, text: "คัดลอกข้อมูลแล้ว ตั้งรหัสใหม่ แก้ไขวันที่ แล้วกดบันทึก" };
+}
 function startNew() {
   editing.value = { slug: "", isNew: true };
   newSlug.value = "";
@@ -59,7 +66,11 @@ const stamp = () => new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14).
 async function save() {
   if (!editing.value) return;
   const e = editing.value;
-  const slug = e.isNew ? newSlug.value.trim() || stamp() : e.slug;
+  const slug = e.isNew ? newSlug.value.trim() || (col.value.slugHint ? "" : stamp()) : e.slug;
+  if (!slug) {
+    msg.value = { ok: false, text: "กรุณากรอกรหัส" };
+    return;
+  }
   saving.value = true;
   msg.value = null;
   try {
@@ -123,12 +134,18 @@ onMounted(loadList);
         <input v-model="newSlug" class="field mt-1 max-w-sm" placeholder="เช่น course-2570 (a-z 0-9 และ -)" />
         <p class="mt-1 text-xs text-slate-500">ใช้เป็นที่อยู่หน้า /articles/… เว้นว่าง = ตั้งให้อัตโนมัติ</p>
       </div>
+      <div v-else-if="editing.isNew && col.slugHint" class="mt-4">
+        <label class="block text-sm font-semibold text-navy-800">รหัส<span class="text-red-600"> *</span></label>
+        <input v-model="newSlug" class="field mt-1 max-w-sm" placeholder="a-z 0-9 และ - เท่านั้น" />
+        <p class="mt-1 text-xs text-slate-500">{{ col.slugHint }}</p>
+      </div>
       <div class="mt-4 space-y-5">
         <CmsField v-for="f in col.fields" :key="f.name" v-model="values[f.name]" :field="f" :auth-headers="authHeaders" />
       </div>
       <p v-if="msg" class="mt-4 rounded-2xl px-4 py-3 text-sm" :class="msg.ok ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-700'">{{ msg.text }}</p>
       <div class="mt-5 flex flex-wrap items-center gap-3">
         <button :disabled="saving" class="btn-brand px-6 py-2.5 text-sm disabled:opacity-60" @click="save">{{ saving ? "กำลังบันทึก..." : "บันทึกและเผยแพร่" }}</button>
+        <button v-if="!editing.isNew && col.slugHint" class="rounded-full border border-navy-800 px-5 py-2 text-sm text-navy-800 hover:bg-navy-800 hover:text-white" @click="duplicate">คัดลอกเป็น{{ col.singular }}ใหม่</button>
         <button v-if="!editing.isNew && col.kind === 'folder'" class="text-sm text-red-600 hover:underline" @click="remove">ลบ{{ col.singular }}นี้ถาวร</button>
       </div>
     </section>

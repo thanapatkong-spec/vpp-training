@@ -7,7 +7,6 @@ const adminEmails = () => (process.env.ADMIN_EMAILS || "").split(",").map((e) =>
 const site = () => (process.env.BETTER_AUTH_URL || "").replace(/\/$/, "");
 type App = { prefix: string; firstName: string; lastName: string; packageId: string; workplace?: string | null };
 const fullName = (a: App) => `${a.prefix}${a.firstName} ${a.lastName}`;
-export const priceOf = (packageId: string) => PACKAGES.find((p) => p.id === packageId)?.price ?? 0;
 
 function layout(title: string, lines: string[], cta?: { url: string; label: string }) {
   const html = `<div style="font-family:sans-serif;max-width:560px;line-height:1.6;color:#0f2742"><h2 style="color:#0b2f5b">${esc(title)}</h2>${lines.map((l) => `<p>${l}</p>`).join("")}${cta ? `<p><a href="${esc(cta.url)}" style="display:inline-block;background:#f26b1d;color:#fff;padding:10px 20px;border-radius:999px;text-decoration:none">${esc(cta.label)}</a></p>` : ""}<p style="color:#64748b;font-size:13px">มีข้อสงสัย ตอบกลับอีเมลนี้ได้เลย · ทีมงาน VPP (Dr.John x คชาเว็ท)</p></div>`;
@@ -25,11 +24,11 @@ export async function mailSubmitted(a: App, to: string, resubmit = false) {
   await sendMail({ to: adminEmails(), subject: `${resubmit ? "ใบสมัครแก้ไขแล้ว" : "ใบสมัครใหม่"}: ${fullName(a)}`, ...n, replyTo: to });
 }
 
-export async function mailReviewed(a: App, to: string, status: string, note: string | null | undefined, rejectedDocs: { kind: string; note?: string | null }[]) {
+export async function mailReviewed(a: App, to: string, status: string, note: string | null | undefined, rejectedDocs: { kind: string; note?: string | null }[], amount = 0) {
   if (status === "approved") {
     const m = layout("ใบสมัครของคุณผ่านการตรวจสอบแล้ว", [
       `เรียน ${esc(fullName(a))}`,
-      `ขั้นต่อไป: ชำระค่าเรียน <b>${priceOf(a.packageId).toLocaleString("th-TH")} บาท</b> ผ่านพร้อมเพย์ แล้วอัปโหลดสลิปในหน้าใบสมัคร ระบบจะยืนยันการชำระให้อัตโนมัติ`,
+      `ขั้นต่อไป: ชำระค่าเรียน <b>${amount.toLocaleString("th-TH")} บาท</b> ผ่าน QR พร้อมเพย์ในหน้าใบสมัคร แล้วแนบสลิป`,
       "และชำระค่าตรวจสอบคุณสมบัติให้สัตวแพทยสภาตามช่องทางที่สัตวแพทยสภากำหนด",
       note ? `หมายเหตุจากทีมงาน: ${esc(note)}` : "",
     ].filter(Boolean), { url: `${site()}/apply`, label: "ชำระค่าเรียน" });

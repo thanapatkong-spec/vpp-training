@@ -37,7 +37,7 @@ async function saveProfile() {
   try {
     await $fetch("/api/me", { method: "PATCH", body: { ...prof } });
     profMsg.value = { ok: true, text: "บันทึกโปรไฟล์แล้ว" };
-    await auth.getSession({ fetchOptions: { cache: "no-store" } }).catch(() => {});
+    await auth.getSession({ query: { disableCookieCache: true }, fetchOptions: { cache: "no-store" } }).catch(() => {});
   } catch (e: any) {
     profMsg.value = { ok: false, text: e?.data?.message || "บันทึกไม่สำเร็จ" };
   } finally {

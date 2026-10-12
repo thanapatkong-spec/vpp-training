@@ -47,6 +47,16 @@ export function validate(col: CmsCollection, values: Record<string, unknown>): s
     if (f.type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return `"${f.label}" ต้องเป็นวันที่`;
     if (f.type === "number" && typeof v !== "number") return `"${f.label}" ต้องเป็นตัวเลข`;
   }
+  // ฟิลด์บังคับในแต่ละแถวของรายการ (เช่น หัวข้อตารางเรียน)
+  for (const f of col.fields) {
+    if (f.type !== "list" || !Array.isArray(values[f.name])) continue;
+    for (const [i, row] of (values[f.name] as Record<string, unknown>[]).entries()) {
+      for (const sf of f.fields || []) {
+        if (sf.required && clean(sf, row?.[sf.name]) === undefined) return `"${f.label}" แถวที่ ${i + 1}: กรุณากรอก "${sf.label}"`;
+        if (sf.type === "select" && row?.[sf.name] && !sf.options!.some((o) => o.value === row[sf.name])) return `"${f.label}" แถวที่ ${i + 1}: "${sf.label}" ไม่ถูกต้อง`;
+      }
+    }
+  }
   const sel = col.fields.find((f) => f.type === "select");
   if (sel && values[sel.name] && !sel.options!.some((o) => o.value === values[sel.name])) return `"${sel.label}" ไม่ถูกต้อง`;
   return null;
