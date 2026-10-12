@@ -177,7 +177,12 @@ async function submit() {
 // รุ่นที่เลือกได้: รุ่นที่เปิดรับ + รุ่นเดิมของใบสมัครที่ขอแก้ไข (แม้ปิดรับแล้ว)
 const cohortChoices = computed(() => cohorts.value.filter((c) => (c.status === "open" && canApply(c.id)) || c.id === existing.value?.cohortId));
 const selCohort = computed(() => cohorts.value.find((c) => c.id === f.cohortId));
-const headCohort = computed(() => selCohort.value ?? openCohorts.value[0]);
+// หัวข้อหน้า: รุ่นของใบสมัครที่ดูอยู่ / รุ่นที่เลือกในฟอร์ม (หน้ารายการใบสมัครของฉันไม่ระบุรุ่น)
+const headCohort = computed(() => {
+  if (existing.value) return cohorts.value.find((c) => c.id === existing.value!.cohortId);
+  if (!cohortCtx.value && myApps.value.length && !showForm.value) return undefined;
+  return selCohort.value;
+});
 const packages = computed(() => cohortPackages(selCohort.value, site.value));
 const pkg = computed(() => packages.value.find((p) => p.id === f.packageId));
 const applyPackages = computed(() => APPLY_PACKAGES.map((id) => packages.value.find((p) => p.id === id)!));
