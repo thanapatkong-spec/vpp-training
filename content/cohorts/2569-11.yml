@@ -1,8 +1,7 @@
-name: "รุ่นที่เปิดรับบัตร"
+name: "รุ่นที่ 2"
 status: "open"
 seats: 30
 dates: "4–5 และ 11–12 พฤศจิกายน 2569"
-order: 1
 priceTheory: 7000
 pricePractical: 10000
 priceBundle: 15000
@@ -20,3 +19,4 @@ sessions:
     date: "วันที่ 23–24 พฤศจิกายน 2569"
     time: "09:00–16:00 น. ณ รพส.คชาเวท ลาซาล"
     extra: "สอบปฏิบัติทันทีหลังเรียนจบ"
+order: 1
