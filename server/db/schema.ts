@@ -1,4 +1,4 @@
-import { boolean, customType, date, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, customType, date, integer, jsonb, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const packageEnum = pgEnum("package_id", ["theory", "practical", "bundle"]);
 export const paymentStatus = pgEnum("payment_status", ["pending", "confirmed", "rejected"]);
@@ -210,4 +210,22 @@ export const payments = pgTable("payments", {
   note: text("note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+});
+
+// รุ่นที่เปิดรับสมัคร (แก้ในหน้าแอดมิน มีผลทันที) — id = รหัสรุ่น เช่น 2569-11 ที่ใบสมัครอ้างถึง
+// ครั้งแรกระบบคัดลอกจาก content/cohorts/*.yml ให้อัตโนมัติ · ลบ = ตั้ง deletedAt (กันคัดลอกซ้ำ)
+export const cohorts = pgTable("cohorts", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  status: text("status").notNull().default("open"), // open | full | closed | hidden
+  seats: integer("seats"),
+  dates: text("dates"),
+  order: integer("sort_order").notNull().default(100),
+  priceTheory: integer("price_theory").notNull().default(0),
+  pricePractical: integer("price_practical").notNull().default(0),
+  priceBundle: integer("price_bundle").notNull().default(0),
+  sessions: jsonb("sessions").$type<{ icon?: string; title: string; date?: string; time?: string; extra?: string }[]>().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
 });

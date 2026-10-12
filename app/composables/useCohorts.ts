@@ -1,9 +1,10 @@
 import { sortCohorts, toCohort, type Cohort } from "#shared/cohorts";
 
 // รุ่นทั้งหมด (รวมรุ่นที่ซ่อน — กรองเองตามหน้าที่ใช้)
-// หน้าที่เรนเดอร์ล่วงหน้า (หน้าแรก) อ่านจาก content โดยตรง / หน้าสมาชิก (เรนเดอร์ในเบราว์เซอร์) ดึงจาก /api/cohorts ซึ่งเบากว่ามาก
-export async function useCohorts(opts: { api?: boolean } = {}) {
-  if (opts.api) {
+// เว็บที่มีเซิร์ฟเวอร์ (Vercel): ดึงสดจาก /api/cohorts (ฐานข้อมูล) — แก้ในแอดมินแล้วเห็นทันที
+// เว็บ static (GitHub Pages): อ่านจาก content/cohorts ที่ build ไว้
+export async function useCohorts() {
+  if (useRuntimeConfig().public.membersEnabled) {
     const { data } = await useFetch<Cohort[]>("/api/cohorts", { key: "cohorts-api", default: () => [] });
     return computed(() => data.value ?? []);
   }

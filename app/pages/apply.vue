@@ -10,7 +10,7 @@ const sessionState = auth.useSession();
 const session = computed(() => sessionState.value.data);
 const isPending = computed(() => sessionState.value.isPending);
 const route = useRoute();
-const cohorts = await useCohorts({ api: true });
+const cohorts = await useCohorts();
 const openCohorts = computed(() => cohorts.value.filter((c) => c.status === "open"));
 const firstCohort = () => openCohorts.value.find((c) => c.id === route.query.cohort)?.id || openCohorts.value[0]?.id || "";
 

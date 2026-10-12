@@ -1,11 +1,11 @@
 import { findCollection } from "#shared/cms";
-import { COHORT_STATUS, type CohortStatus } from "#shared/cohorts";
 
 // แอดมิน: รายการเนื้อหาในหมวด (ชื่อ + ค่าสำหรับเรียงลำดับ)
 export default defineEventHandler(async (event) => {
   await requireAdmin(event);
   const col = findCollection(getRouterParam(event, "collection") || "");
   if (!col) throw createError({ statusCode: 404, message: "ไม่พบหมวดเนื้อหา" });
+  if (col.name === "cohorts") return cohortCmsList(); // เก็บในฐานข้อมูล
 
   const names = col.kind === "files" ? col.files!.map((f) => f.name) : (await repoList(col.dir!)).filter((n) => n.endsWith(`.${col.ext}`)).map((n) => n.slice(0, -(col.ext!.length + 1)));
   const items = await Promise.all(
@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
       let v: Record<string, unknown> = {};
       try { v = parseEntry(col, f.content.toString("utf8")); } catch {}
       const label = col.kind === "files" ? col.files!.find((x) => x.name === slug)!.label : String(v[col.titleField] ?? slug);
-      return { slug, title: label, sort: col.sortField ? (v[col.sortField] as string | number | undefined) ?? null : null, draft: v.draft === true, sub: col.name === "cohorts" ? `${slug} · ${COHORT_STATUS[(v.status as CohortStatus) || "open"] ?? v.status}` : v.cohort ? String(v.cohort) : undefined };
+      return { slug, title: label, sort: col.sortField ? (v[col.sortField] as string | number | undefined) ?? null : null, draft: v.draft === true, sub: v.cohort ? String(v.cohort) : undefined };
     }),
   );
   const rows = items.filter((x): x is NonNullable<typeof x> => !!x);

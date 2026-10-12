@@ -8,6 +8,7 @@ export default defineEventHandler(async (event) => {
   if (!col || !isValidSlug(col, slug)) throw createError({ statusCode: 422, message: "ชื่อไฟล์ (slug) ไม่ถูกต้อง ใช้ a-z 0-9 และ - เท่านั้น" });
   const body = (await readBody<{ values?: Record<string, unknown>; sha?: string }>(event)) || {};
   const values = body.values || {};
+  if (col.name === "cohorts") return cohortCmsPut(slug, values, body.sha);
   const bad = validate(col, values);
   if (bad) throw createError({ statusCode: 422, message: bad });
 

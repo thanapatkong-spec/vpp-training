@@ -6,6 +6,7 @@ export default defineEventHandler(async (event) => {
   const col = findCollection(getRouterParam(event, "collection") || "");
   const slug = getRouterParam(event, "slug") || "";
   if (!col || col.kind !== "folder" || !isValidSlug(col, slug)) throw createError({ statusCode: 404, message: "ไม่พบเนื้อหา" });
+  if (col.name === "cohorts") return cohortCmsDelete(slug);
   const path = `${col.dir}/${slug}.${col.ext}`;
   const f = await repoRead(path);
   if (!f) throw createError({ statusCode: 404, message: "ไม่พบเนื้อหา" });
