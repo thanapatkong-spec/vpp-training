@@ -2,8 +2,20 @@
 useHead({ title: "เข้าสู่ระบบ · VPP" });
 const config = useRuntimeConfig();
 const auth = useAuthClient();
-const nextQ = String(useRoute().query.next || "");
-const nextUrl = nextQ.startsWith("/") && !nextQ.startsWith("//") ? nextQ : "/account";
+const route = useRoute();
+const nextQ = String(route.query.next || "");
+const nextUrl = nextQ.startsWith("/") && !nextQ.startsWith("//") ? nextQ : "/";
+// ล็อกอินอยู่แล้ว (หรือเพิ่งล็อกอินสำเร็จ) → ออกจากหน้านี้ทันที
+const sessionState = auth.useSession();
+let leaving = false;
+const leave = () => {
+  if (leaving) return;
+  leaving = true;
+  navigateTo(nextUrl, { replace: true });
+  // สำรอง: ถ้าการเปลี่ยนหน้าค้าง ให้โหลดหน้าใหม่ตรง ๆ
+  setTimeout(() => { if (route.path.startsWith("/login")) window.location.replace(config.app.baseURL.replace(/\/$/, "") + nextUrl); }, 2500);
+};
+watch(() => sessionState.value.data, (d) => { if (d) leave(); }, { immediate: true });
 
 const email = ref("");
 const password = ref("");
@@ -14,12 +26,12 @@ async function submit() {
   error.value = "";
   pending.value = true;
   const { error: err } = await auth.signIn.email({ email: email.value.trim(), password: password.value });
-  pending.value = false;
   if (err) {
+    pending.value = false;
     error.value = err.status === 403 ? "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ (ตรวจลิงก์ในอีเมลที่เราส่งให้)" : "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
     return;
   }
-  await navigateTo(nextUrl);
+  leave(); // ปุ่มยังแสดง "กำลังเข้าสู่ระบบ..." จนกว่าจะเปลี่ยนหน้า
 }
 
 const google = () => auth.signIn.social({ provider: "google", callbackURL: nextUrl });
