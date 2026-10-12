@@ -19,3 +19,14 @@ export function promptPayPayload(target: string, amount?: number) {
   p += "6304";
   return p + crc16(p);
 }
+
+/** QR ชำระบิล (Bill Payment) ของนิติบุคคล — billerId 15 หลัก (เลขผู้เสียภาษี + suffix), ref1/ref2 ตามที่ธนาคารให้มา */
+export function billPaymentPayload(o: { billerId: string; ref1: string; ref2?: string; amount?: number; terminal?: string }) {
+  const bill = f("00", "A000000677010112") + f("01", o.billerId.replace(/\D/g, "")) + f("02", o.ref1) + (o.ref2 ? f("03", o.ref2) : "");
+  let p = f("00", "01") + f("01", o.amount ? "12" : "11") + f("30", bill) + f("53", "764");
+  if (o.amount) p += f("54", o.amount.toFixed(2));
+  p += f("58", "TH");
+  if (o.terminal) p += f("62", f("07", o.terminal));
+  p += "6304";
+  return p + crc16(p);
+}
