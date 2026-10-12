@@ -48,7 +48,7 @@ const google = () => auth.signIn.social({ provider: "google", callbackURL: nextU
         <form class="mt-5 space-y-3" @submit.prevent="submit">
           <input id="name" v-model="name" class="field" placeholder="ชื่อ-นามสกุล *" required autocomplete="name" />
           <input id="email" v-model="email" type="email" class="field" placeholder="อีเมล *" required autocomplete="email" />
-          <input id="password" v-model="password" type="password" class="field" placeholder="รหัสผ่าน (อย่างน้อย 8 ตัวอักษร) *" minlength="8" required autocomplete="new-password" />
+          <PasswordInput id="password" v-model="password" placeholder="รหัสผ่าน (อย่างน้อย 8 ตัวอักษร) *" minlength="8" required autocomplete="new-password" />
           <label class="flex items-start gap-2 px-1 text-xs text-slate-600">
             <input v-model="consent" type="checkbox" class="mt-0.5 accent-brand" />
             <span>ข้าพเจ้ายอมรับ <NuxtLink to="/privacy" target="_blank" class="text-brand-dark underline">นโยบายความเป็นส่วนตัว</NuxtLink> และยินยอมให้เก็บข้อมูลเพื่อยืนยันตัวตนและออกใบประกาศนียบัตร</span>

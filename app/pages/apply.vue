@@ -221,6 +221,7 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
             </div>
             <div class="min-w-[14rem] flex-1 text-sm text-slate-700">
               <p>ชื่อบัญชี: <b>{{ existing.payment.promptpay.name }}</b></p>
+              <p v-if="existing.payment.promptpay.bank">บัญชี: <b>{{ existing.payment.promptpay.bank }}</b></p>
               <p>ยอดชำระ: <b>{{ baht(existing.payment.amount) }} บาท</b> (ยอดอยู่ใน QR แล้ว)</p>
               <p class="mt-3 text-xs text-slate-500">โอนแล้ว บันทึกภาพสลิปจากแอปธนาคาร แล้วแนบด้านล่าง{{ existing.payment.autoCheck ? " ระบบตรวจสลิปและยืนยันให้ทันที" : " ทีมงานจะตรวจและยืนยันทางอีเมล" }}</p>
               <FilePickButton v-model="slip" label="แนบสลิป" accept="image/jpeg,image/png" :max-mb="500" class="mt-2" />
