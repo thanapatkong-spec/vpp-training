@@ -1,16 +1,40 @@
-// ส่งอีเมลผ่าน Resend (REST) ถ้าไม่ได้ตั้ง RESEND_API_KEY จะพิมพ์ลง log แทน (ใช้ตอนพัฒนา)
-export const mailerEnabled = () => !!process.env.RESEND_API_KEY;
+import nodemailer from "nodemailer";
+
+// ส่งอีเมลผ่าน Gmail/SMTP (ตั้ง SMTP_USER + SMTP_PASS) หรือ Resend (ตั้ง RESEND_API_KEY)
+// ถ้าไม่ได้ตั้งทั้งสองแบบ จะพิมพ์ลง log แทน (ใช้ตอนพัฒนา)
+const smtpEnabled = () => !!(process.env.SMTP_USER && process.env.SMTP_PASS);
+export const mailerEnabled = () => smtpEnabled() || !!process.env.RESEND_API_KEY;
+
+let transport: ReturnType<typeof nodemailer.createTransport> | null = null;
+function smtp() {
+  if (!transport) {
+    const port = Number(process.env.SMTP_PORT || 465);
+    transport = nodemailer.createTransport({
+      host: process.env.SMTP_HOST || "smtp.gmail.com",
+      port,
+      secure: port === 465,
+      auth: { user: process.env.SMTP_USER!, pass: process.env.SMTP_PASS!.replace(/\s+/g, "") }, // รหัสผ่านแอปของ Google มีช่องว่างคั่นได้
+    });
+  }
+  return transport;
+}
 
 export async function sendMail(opts: { to: string | string[]; subject: string; html: string; text: string; replyTo?: string }) {
   const to = (Array.isArray(opts.to) ? opts.to : [opts.to]).filter((e) => e && !e.endsWith("@placeholder.invalid"));
   if (!to.length) return;
   const replyTo = opts.replyTo || process.env.MAIL_REPLY_TO || "info@vetvpp.com"; // ผู้สมัครกดตอบกลับแล้วถึงทีมงาน
-  const key = process.env.RESEND_API_KEY;
-  if (!key) {
-    console.log(`[mail:dev] to=${to.join(",")} reply-to=${replyTo} subject=${opts.subject}\n${opts.text}`);
-    return;
-  }
   try {
+    if (smtpEnabled()) {
+      // Gmail ส่งได้เฉพาะในนามบัญชีที่ล็อกอิน (หรือ alias ที่ยืนยันแล้ว)
+      const from = process.env.MAIL_FROM || `VPP <${process.env.SMTP_USER}>`;
+      await smtp().sendMail({ from, to, replyTo, subject: opts.subject, html: opts.html, text: opts.text });
+      return;
+    }
+    const key = process.env.RESEND_API_KEY;
+    if (!key) {
+      console.log(`[mail:dev] to=${to.join(",")} reply-to=${replyTo} subject=${opts.subject}\n${opts.text}`);
+      return;
+    }
     const res = await fetch("https://api.resend.com/emails", {
       method: "POST",
       headers: { Authorization: `Bearer ${key}`, "Content-Type": "application/json" },

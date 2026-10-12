@@ -9,7 +9,9 @@ import { mailerEnabled, sendMail } from "./mailer";
 let _auth: ReturnType<typeof create> | null = null;
 
 function create(db: NonNullable<ReturnType<typeof useDb>>) {
-  const verifyEmail = mailerEnabled(); // มีบริการอีเมลแล้วเท่านั้นถึงบังคับยืนยันอีเมล
+  const mail = mailerEnabled();
+  // บังคับยืนยันอีเมลก่อนล็อกอิน เฉพาะเมื่อตั้ง REQUIRE_EMAIL_VERIFICATION=true (กันสมาชิกเดิมที่ยังไม่ยืนยันล็อกอินไม่ได้ทันทีที่เปิดอีเมล)
+  const verifyEmail = mail && process.env.REQUIRE_EMAIL_VERIFICATION === "true";
   const googleId = process.env.GOOGLE_CLIENT_ID;
   const googleSecret = process.env.GOOGLE_CLIENT_SECRET;
 
@@ -31,7 +33,7 @@ function create(db: NonNullable<ReturnType<typeof useDb>>) {
       },
     },
     emailVerification: {
-      sendOnSignUp: verifyEmail,
+      sendOnSignUp: mail, // มีอีเมลแล้วส่งลิงก์ยืนยันตอนสมัครเสมอ (ไม่บังคับ)
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user: u, url }) => {
         await sendMail({ to: u.email, subject: "ยืนยันอีเมล · VPP", ...mailBody("ยืนยันอีเมลเพื่อเริ่มใช้งานบัญชี VPP", url, "ยืนยันอีเมล") });
