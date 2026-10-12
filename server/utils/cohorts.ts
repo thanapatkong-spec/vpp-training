@@ -9,8 +9,8 @@ import { cohorts } from "../db/schema";
 
 /** ข้อมูลจากไฟล์ที่ฝังมากับ build */
 export async function bundledCohorts(): Promise<Cohort[]> {
-  const st = useStorage("assets:cohorts");
-  const keys = (await st.getKeys()).filter((k) => /\.ya?ml$/.test(k));
+  const st = useStorage("assets:content");
+  const keys = (await st.getKeys("cohorts:")).filter((k) => /\.ya?ml$/.test(k));
   const list = await Promise.all(keys.map(async (k) => {
     const raw = await st.getItemRaw(k);
     const data = YAML.parse(typeof raw === "string" ? raw : Buffer.from(raw as Uint8Array).toString("utf8")) || {};

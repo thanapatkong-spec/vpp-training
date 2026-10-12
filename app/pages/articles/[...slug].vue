@@ -2,8 +2,8 @@
 import { ArrowLeft, Download, FileText } from "lucide-vue-next";
 
 const route = useRoute();
-const { data: page } = await useAsyncData(route.path, () => queryCollection("articles").path(route.path).first());
-if (!page.value) throw createError({ statusCode: 404, statusMessage: "ไม่พบบทความ", fatal: true });
+const slug = ([] as string[]).concat(route.params.slug as string[] | string).join("/");
+const page = await useContentItem("articles", slug, "ไม่พบบทความ");
 useHead({ title: `${page.value.title} · VPP` });
 const asset = useAsset();
 const ext = (p: string) => (p.split(".").pop() ?? "").toUpperCase();
@@ -21,7 +21,7 @@ const date = new Date(page.value.date).toLocaleDateString("th-TH", { year: "nume
       </div>
       <h1 class="mt-3 text-3xl font-bold text-navy-800">{{ page.title }}</h1>
       <img v-if="page.cover" :src="asset(page.cover)" :alt="page.title" class="mt-5 w-full rounded-2xl" />
-      <div class="prose-vpp mt-6"><ContentRenderer :value="page" /></div>
+      <div class="prose-vpp mt-6" v-html="page.html" />
       <section v-if="page.files?.length" class="mt-10">
         <h2 class="flex items-center gap-2 text-xl font-bold text-navy-800"><FileText class="text-brand" />เอกสารดาวน์โหลด</h2>
         <ul class="mt-3 space-y-2">

@@ -1,7 +1,6 @@
 import tailwindcss from "@tailwindcss/vite";
 
 export default defineNuxtConfig({
-  modules: ["@nuxt/content"],
   compatibilityDate: "2026-01-01",
   devtools: { enabled: true },
   css: ["~/assets/css/main.css"],
@@ -27,8 +26,8 @@ export default defineNuxtConfig({
       googleLogin: false, // NUXT_PUBLIC_GOOGLE_LOGIN=true เมื่อตั้ง GOOGLE_CLIENT_ID/SECRET แล้ว
     },
   },
-  // ข้อมูลรุ่น (content/cohorts) ฝังให้ API อ่านราคา/สถานะรุ่นได้ทันที
-  nitro: { serverAssets: [{ baseName: "cohorts", dir: "../content/cohorts" }] },
+  // ไฟล์ใน content/ = ข้อมูลตั้งต้น ฝังมากับ build ให้ระบบคัดลอกเข้าฐานข้อมูลครั้งแรก (หลังจากนั้นแก้ในหน้าแอดมิน)
+  nitro: { serverAssets: [{ baseName: "content", dir: "../content" }] },
   // หน้าสมาชิกเรนเดอร์ฝั่งเบราว์เซอร์ (ต้องใช้ session)
   routeRules: {
     "/login": { ssr: false },

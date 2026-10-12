@@ -1,4 +1,4 @@
-// ต่อ baseURL (เช่น /vpp-training/ บน GitHub Pages) เข้ากับ path ของรูป/ไฟล์ใน public/
+// ต่อ baseURL เข้ากับ path ของรูป/ไฟล์ (ไฟล์ใน public/ หรือ /api/media/...) · URL เต็ม (Vercel Blob) ใช้ตามเดิม
 export const useAsset = () => {
   const base = useRuntimeConfig().app.baseURL.replace(/\/$/, "");
   return (path: string) => {

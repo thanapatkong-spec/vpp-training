@@ -1,5 +1,6 @@
 // รุ่นที่เปิดรับสมัคร — แก้ในหน้าแอดมิน > เนื้อหาเว็บ > รุ่นที่เปิดรับสมัคร (ไฟล์ content/cohorts/<รหัสรุ่น>.yml)
 import { PACKAGES, type PackageId } from "./config";
+import type { SiteSettings } from "./siteSettings";
 
 export type CohortStatus = "open" | "full" | "closed" | "hidden";
 export type SessionIcon = "theory" | "exam" | "practical" | "other";
@@ -32,7 +33,7 @@ export const COHORT_STATUS: Record<CohortStatus, string> = {
   hidden: "ซ่อน (ไม่แสดงบนเว็บ)",
 };
 
-// แถวจาก queryCollection("cohorts") → Cohort (id = ชื่อไฟล์)
+// ข้อมูลจากไฟล์ content/cohorts/<id>.yml → Cohort (id = ชื่อไฟล์)
 export function toCohort(row: Record<string, any>): Cohort {
   const stem = String(row.stem || row.id || "").split("/").pop()!.replace(/\.ya?ml$/, "");
   return {
@@ -56,13 +57,19 @@ export function cohortPrice(c: Pick<Cohort, "priceTheory" | "pricePractical" | "
   return packageId === "theory" ? c.priceTheory : packageId === "practical" ? c.pricePractical : packageId === "bundle" ? c.priceBundle : 0;
 }
 
-/** แพ็กเกจพร้อมราคาของรุ่น (ส่วนลดแพ็กเกจครบ 2 ภาค คำนวณจากราคาแยก) */
-export function cohortPackages(c: Cohort | undefined) {
+type PkgNames = Partial<Pick<SiteSettings, "pkgTheoryName" | "pkgTheorySub" | "pkgPracticalName" | "pkgPracticalSub" | "pkgBundleName">>;
+
+/** แพ็กเกจพร้อมราคาของรุ่น (ส่วนลดแพ็กเกจครบ 2 ภาค คำนวณจากราคาแยก) · names = ชื่อจากตั้งค่าเว็บไซต์ */
+export function cohortPackages(c: Cohort | undefined, names: PkgNames = {}) {
   const full = c ? c.priceTheory + c.pricePractical : 0;
-  return PACKAGES.map((p) => {
+  return PACKAGES.map((base) => {
+    const p = { ...base };
+    if (p.id === "theory") { p.short = names.pkgTheoryName || p.short; p.sub = names.pkgTheorySub || p.sub; p.label = `${p.short} (${p.sub})`; }
+    if (p.id === "practical") { p.short = names.pkgPracticalName || p.short; p.sub = names.pkgPracticalSub || p.sub; p.label = `${p.short} ${p.sub}`; }
+    if (p.id === "bundle") p.short = names.pkgBundleName || p.short;
     const price = cohortPrice(c, p.id);
     if (p.id !== "bundle" || !c) return { ...p, price };
     const save = full - price;
-    return { ...p, price, full, save, label: save > 0 ? `แพ็กเกจครบ 2 ภาค (ประหยัด ${save.toLocaleString("th-TH")} บาท)` : "แพ็กเกจครบ 2 ภาค", sub: save > 0 ? `ประหยัด ${save.toLocaleString("th-TH")} บาท` : "ทฤษฎี + ปฏิบัติ" };
+    return { ...p, price, full, save, label: save > 0 ? `${p.short} (ประหยัด ${save.toLocaleString("th-TH")} บาท)` : p.short, sub: save > 0 ? `ประหยัด ${save.toLocaleString("th-TH")} บาท` : "ทฤษฎี + ปฏิบัติ" };
   }) as ((typeof PACKAGES)[number] & { id: PackageId; full?: number; save?: number })[];
 }

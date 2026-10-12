@@ -7,13 +7,15 @@ const MAX = 4 * 1024 * 1024;
 export default defineEventHandler(async (event) => {
   const u = await requireUser(event);
   const db = useDb()!;
-  const [app] = await db.select().from(applications).where(eq(applications.userId, u.id)).orderBy(desc(applications.createdAt)).limit(1);
+  const parts = (await readMultipartFormData(event)) ?? [];
+  const cohort = parts.find((p) => p.name === "cohort")?.data.toString("utf8") || "";
+  const [app] = await db.select().from(applications).where(and(eq(applications.userId, u.id), cohort ? eq(applications.cohortId, cohort) : undefined)).orderBy(desc(applications.createdAt)).limit(1);
   if (!app || app.status !== "approved") throw createError({ statusCode: 409, message: "ชำระเงินได้หลังใบสมัครผ่านการตรวจสอบ" });
   const prev = await db.select({ status: payments.status }).from(payments).where(eq(payments.applicationId, app.id));
   if (prev.some((p) => p.status === "paid")) throw createError({ statusCode: 409, message: "ชำระค่าเรียนเรียบร้อยแล้ว" });
   if (prev.some((p) => p.status === "pending")) throw createError({ statusCode: 409, message: "ส่งสลิปแล้ว กรุณารอทีมงานตรวจสอบ" });
 
-  const slip = ((await readMultipartFormData(event)) ?? []).find((p) => p.name === "slip");
+  const slip = parts.find((p) => p.name === "slip");
   if (!slip?.data.length) throw createError({ statusCode: 422, message: "กรุณาแนบรูปสลิป" });
   if (slip.data.length > MAX) throw createError({ statusCode: 422, message: "ไฟล์สลิปต้องไม่เกิน 4MB" });
   const d = slip.data;

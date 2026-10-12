@@ -1,5 +1,7 @@
 <script setup lang="ts">
-import { CONTACT } from "#shared/config";
+import { textsOf } from "#shared/siteSettings";
+
+const site = useSiteSettingsNow();
 </script>
 
 <template>
@@ -7,7 +9,7 @@ import { CONTACT } from "#shared/config";
     <div class="mx-auto grid max-w-6xl gap-8 px-5 py-12 md:grid-cols-3">
       <div>
         <div class="text-3xl font-bold">VPP</div>
-        <p class="mt-2 text-sm text-sky-card">พัฒนาคน เพื่อยกระดับมาตรฐานโรงพยาบาลสัตว์</p>
+        <p class="mt-2 text-sm text-sky-card">{{ site.footerTagline }}</p>
         <nav class="mt-3 flex flex-wrap gap-x-4 gap-y-1 text-sm text-sky-card">
           <NuxtLink to="/about" class="hover:text-white">เกี่ยวกับ VPP</NuxtLink>
           <NuxtLink to="/collaboration" class="hover:text-white">ความร่วมมือ</NuxtLink>
@@ -18,17 +20,15 @@ import { CONTACT } from "#shared/config";
       <div class="text-sm">
         <div class="font-semibold">เหมาะสำหรับ</div>
         <ul class="mt-2 space-y-1 text-sky-card">
-          <li>• พนักงานใหม่ของโรงพยาบาลสัตว์</li>
-          <li>• ผู้ช่วยแพทย์ที่ต้องการเพิ่มทักษะ</li>
-          <li>• โรงพยาบาลสัตว์/คลินิกที่ต้องการพัฒนาทีม</li>
+          <li v-for="t in textsOf(site.footerAudience)" :key="t">• {{ t }}</li>
         </ul>
       </div>
       <div class="text-sm">
         <div class="font-semibold">สอบถาม / สมัครเรียน</div>
         <ul class="mt-2 space-y-1 text-sky-card">
-          <li>Line: {{ CONTACT.line }}</li>
-          <li>{{ CONTACT.email }}</li>
-          <li>{{ CONTACT.phone }}</li>
+          <li>Line: {{ site.contactLine }}</li>
+          <li>{{ site.contactEmail }}</li>
+          <li>{{ site.contactPhone }}</li>
         </ul>
       </div>
     </div>

@@ -1,5 +1,6 @@
 import type { H3Event } from "h3";
 import { ApplicationInput, APP_DOCS, type AppDocKind } from "#shared/application";
+import { textsOf } from "#shared/siteSettings";
 
 const MAX_TOTAL = 4 * 1024 * 1024; // Vercel รับ request ได้ราว 4.5MB
 
@@ -41,3 +42,12 @@ export async function readApplicationForm(event: H3Event) {
 }
 
 export const maskId = (id: string) => (id.length === 13 ? `${id.slice(0, 1)}-xxxx-xxxxx-${id.slice(10, 12)}-${id.slice(12)}` : "xxxx");
+
+/** คำนำหน้า/วุฒิการศึกษาต้องอยู่ในรายการปัจจุบันของตั้งค่าเว็บไซต์ (ใบสมัครที่ขอแก้ไขยังใช้ค่าเดิมได้) */
+export async function checkFormOptions(values: { prefix: string; education: string }, keep: { prefix?: string; education?: string } = {}) {
+  const site = await getSiteSettings();
+  const bad: Record<string, string> = {};
+  if (!textsOf(site.formPrefixes).includes(values.prefix) && values.prefix !== keep.prefix) bad.prefix = "กรุณาเลือกคำนำหน้า";
+  if (!textsOf(site.formEducation).includes(values.education) && values.education !== keep.education) bad.education = "กรุณาเลือกวุฒิการศึกษา";
+  if (Object.keys(bad).length) throw createError({ statusCode: 422, message: Object.values(bad)[0]!, data: { fieldErrors: bad } });
+}

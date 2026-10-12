@@ -83,7 +83,7 @@ async function save() {
   msg.value = null;
   try {
     await $fetch(`/api/manage/cms/${col.value.name}/${encodeURIComponent(slug)}`, { method: "PUT", body: { values: values.value, sha: e.sha }, headers: props.authHeaders() });
-    const done = { ok: true, text: col.value.name === "cohorts" ? "บันทึกแล้ว แสดงบนเว็บทันที" : "บันทึกแล้ว เว็บจะอัปเดตภายใน 1–3 นาที" };
+    const done = { ok: true, text: "บันทึกแล้ว แสดงบนเว็บทันที" };
     await Promise.all([loadList(), open(slug)]);
     msg.value = done; // open() ล้างข้อความ — แสดงผลบันทึกหลังเปิดเสร็จ
   } catch (ex: any) {
@@ -97,7 +97,7 @@ async function remove() {
   try {
     await $fetch(`/api/manage/cms/${col.value.name}/${editing.value.slug}`, { method: "DELETE", headers: props.authHeaders() });
     editing.value = null;
-    msg.value = { ok: true, text: col.value.name === "cohorts" ? "ลบแล้ว หายจากเว็บทันที" : "ลบแล้ว เว็บจะอัปเดตภายใน 1–3 นาที" };
+    msg.value = { ok: true, text: "ลบแล้ว หายจากเว็บทันที" };
     await loadList();
   } catch (ex: any) {
     msg.value = { ok: false, text: ex?.data?.message || "ลบไม่สำเร็จ" };
