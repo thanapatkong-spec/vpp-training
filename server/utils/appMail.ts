@@ -54,3 +54,15 @@ export async function mailSlipNeedsReview(a: App, to: string, amount: number, re
   const n = layout("มีสลิปรอตรวจสอบ", [`${esc(fullName(a))} อัปโหลดสลิปค่าเรียน ${amount.toLocaleString("th-TH")} บาท`, reason ? `ระบบตรวจอัตโนมัติไม่ผ่าน: ${esc(reason)}` : "ยังไม่ได้เปิดระบบตรวจสลิปอัตโนมัติ กรุณาตรวจเอง"], { url: `${site()}/manage`, label: "ตรวจสลิป" });
   await sendMail({ to: adminEmails(), subject: `สลิปรอตรวจ: ${fullName(a)}`, ...n, replyTo: to });
 }
+
+// ลิงก์เปิดใช้งานบัญชี (สมาชิกที่แอดมินสร้างไว้ ตั้งรหัสผ่านเอง)
+export async function mailActivation(name: string, to: string, url: string, expiresAt: Date) {
+  const until = expiresAt.toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric", timeZone: "Asia/Bangkok" });
+  const m = layout("เปิดใช้งานบัญชี VPP ของคุณ", [
+    `เรียน ${esc(name)}`,
+    "ทีมงาน VPP สร้างบัญชีสมาชิกไว้ให้คุณแล้ว กดปุ่มด้านล่างเพื่อตั้งรหัสผ่าน แล้วเข้าดูข้อมูลและใบประกาศนียบัตรของคุณได้",
+    `ลิงก์ใช้ได้ครั้งเดียว ถึงวันที่ ${until}`,
+    `หลังตั้งรหัสผ่านแล้ว เข้าสู่ระบบด้วยอีเมล ${esc(to)} หรือกด "เข้าสู่ระบบด้วย Google" ด้วยอีเมลเดียวกันก็ได้`,
+  ], { url, label: "เปิดใช้งานบัญชี" });
+  return sendMail({ to, subject: "เปิดใช้งานบัญชีสมาชิก VPP", ...m });
+}

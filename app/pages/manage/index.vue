@@ -59,11 +59,60 @@ async function makeLink(m: Member) {
     linkMsg.value = e?.data?.message || "สร้างลิงก์ไม่สำเร็จ";
   }
 }
+// ส่งลิงก์เปิดใช้งานไปที่อีเมลในช่อง "อีเมล" (บันทึกอีเมลใหม่ให้ก่อนถ้าแก้ไว้)
+const sendingLink = ref(false);
+async function sendLink(m: Member) {
+  linkMsg.value = "";
+  const email = pf.email.trim();
+  if (!email) return (linkMsg.value = "กรุณาใส่อีเมลของสมาชิกก่อน");
+  const saved = m.placeholder ? "" : m.email;
+  if (email.toLowerCase() !== saved.toLowerCase() && !confirm(`บันทึกอีเมล ${email} เป็นอีเมลเข้าสู่ระบบของ ${m.name} แล้วส่งลิงก์?`)) return;
+  sendingLink.value = true;
+  try {
+    if (email.toLowerCase() !== saved.toLowerCase()) {
+      await $fetch(`/api/manage/members/${m.id}`, { method: "PATCH", body: { name: pf.name, email, phone: pf.phone, cohort: pf.cohort }, headers: authHeaders() });
+      await loadMembers();
+    }
+    const r = await $fetch<{ url: string; expiresAt: string; sentTo: string | null }>(`/api/manage/members/${m.id}/activation-link`, { method: "POST", body: { send: true }, headers: authHeaders() });
+    link.value = r;
+    linkMsg.value = `ส่งลิงก์ไปที่ ${r.sentTo} แล้ว (ลิงก์เก่าที่ยังไม่ใช้ถูกยกเลิก)`;
+  } catch (e: any) {
+    if (e?.data?.data?.url) link.value = { url: e.data.data.url } as any;
+    linkMsg.value = e?.data?.message || "ส่งไม่สำเร็จ";
+  } finally {
+    sendingLink.value = false;
+  }
+}
 async function copyLink() {
   if (!link.value) return;
   try { await navigator.clipboard.writeText(link.value.url); linkMsg.value = "คัดลอกแล้ว"; } catch { linkMsg.value = "คัดลอกไม่ได้ ให้เลือกข้อความแล้วคัดลอกเอง"; }
 }
 const csvCell = (v: string) => `"${(v || "").replace(/"/g, '""')}"`;
+async function bulkSend() {
+  const label = cohortFilter.value || "ทุกรุ่น";
+  if (!confirm(`ส่งอีเมลลิงก์เปิดใช้งานให้สมาชิกที่ยังไม่เปิดใช้งานและมีอีเมล (${label}) ?\nลิงก์เก่าที่ยังไม่ได้ใช้จะถูกยกเลิก`)) return;
+  bulkBusy.value = true;
+  try {
+    const rows = await $fetch<{ name: string; cohort: string | null; phone: string | null; email: string; url: string; sent: boolean }[]>("/api/manage/members/activation-links", { method: "POST", body: { cohort: cohortFilter.value || undefined, send: true }, headers: authHeaders() });
+    if (!rows.length) return alert("ไม่มีสมาชิกที่ยังไม่เปิดใช้งาน");
+    const sent = rows.filter((r) => r.sent).length;
+    const rest = rows.filter((r) => !r.sent);
+    if (!rest.length) return alert(`ส่งอีเมลแล้ว ${sent} คน`);
+    if (confirm(`ส่งอีเมลแล้ว ${sent} คน\nส่งไม่ได้ ${rest.length} คน (ไม่มีอีเมล หรือส่งไม่สำเร็จ)\n\nดาวน์โหลดลิงก์ของคนที่ส่งไม่ได้ (CSV) ไว้ส่งทาง LINE?`)) downloadLinks(rest, `${label}-ส่งไม่ได้`);
+  } catch (e: any) {
+    alert(e?.data?.message || "ส่งไม่สำเร็จ");
+  } finally {
+    bulkBusy.value = false;
+  }
+}
+const bulkBusy = ref(false);
+function downloadLinks(rows: { name: string; cohort: string | null; phone: string | null; email: string; url: string }[], label: string) {
+  const csv = "\ufeffชื่อ-สกุล,รุ่น,เบอร์โทร,อีเมล,ลิงก์เปิดใช้งาน\n" + rows.map((r) => [r.name, r.cohort || "", r.phone || "", r.email, r.url].map(csvCell).join(",")).join("\n");
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv;charset=utf-8" }));
+  a.download = `activation-links-${label}.csv`;
+  a.click();
+}
 async function bulkLinks() {
   const label = cohortFilter.value || "ทุกรุ่น";
   if (!confirm(`สร้างลิงก์เปิดใช้งานให้สมาชิกที่นำเข้าและยังไม่เปิดใช้งาน (${label}) ?\nลิงก์เก่าที่ยังไม่ได้ใช้จะถูกยกเลิก`)) return;
@@ -222,7 +271,8 @@ async function reject(id: string) {
 type Imp = { name: string; email: string; phone?: string; cohort: string };
 const impRows = ref<Imp[]>([]);
 const impMsg = ref("");
-const impResult = ref<{ dryRun: boolean; create: number; noEmail?: number; skipped: { name: string; reason: string }[] } | null>(null);
+const impResult = ref<{ dryRun: boolean; create: number; noEmail?: number; invited?: number; skipped: { name: string; reason: string }[] } | null>(null);
+const impInvite = ref(false);
 const impBusy = ref(false);
 
 async function pickExcel(e: Event) {
@@ -257,7 +307,7 @@ async function pickExcel(e: Event) {
   }
 }
 // เพิ่มสมาชิกทีละคน (ใช้ระบบเดียวกับนำเข้า Excel: ข้ามถ้ามีบัญชี/ชื่อซ้ำ)
-const one = reactive({ name: "", email: "", phone: "", cohort: "" });
+const one = reactive({ name: "", email: "", phone: "", cohort: "", invite: true });
 const oneBusy = ref(false);
 const oneMsg = ref<{ ok: boolean; text: string } | null>(null);
 async function addOne() {
@@ -265,9 +315,11 @@ async function addOne() {
   if (!one.name.trim()) return (oneMsg.value = { ok: false, text: "กรุณากรอกชื่อ-สกุล" });
   oneBusy.value = true;
   try {
-    const r = await $fetch<{ create: number; skipped: { reason: string }[] }>("/api/manage/members/import", { method: "POST", body: { dryRun: false, rows: [{ ...one }] }, headers: authHeaders() });
+    const { invite, ...row } = one;
+    const r = await $fetch<{ create: number; invited: number; skipped: { reason: string }[] }>("/api/manage/members/import", { method: "POST", body: { dryRun: false, rows: [row], invite }, headers: authHeaders() });
     if (r.create) {
-      oneMsg.value = { ok: true, text: `เพิ่ม ${one.name.trim()} แล้ว${one.email.trim() ? "" : " (ยังไม่มีอีเมล เติมทีหลังได้ในรายชื่อด้านล่าง)"}` };
+      const extra = !one.email.trim() ? " (ยังไม่มีอีเมล เติมทีหลังได้ในรายชื่อด้านล่าง)" : r.invited ? ` และส่งอีเมลเปิดใช้งานไปที่ ${one.email.trim()} แล้ว` : invite ? " (ส่งอีเมลไม่สำเร็จ สร้างลิงก์ส่งเองได้ในรายชื่อด้านล่าง)" : "";
+      oneMsg.value = { ok: true, text: `เพิ่ม ${one.name.trim()} แล้ว${extra}` };
       Object.assign(one, { name: "", email: "", phone: "" });
       loadMembers();
     } else oneMsg.value = { ok: false, text: `ไม่ได้เพิ่ม: ${r.skipped[0]?.reason || "ข้อมูลไม่ถูกต้อง"}` };
@@ -280,7 +332,7 @@ async function addOne() {
 async function runImport(dryRun: boolean) {
   impBusy.value = true;
   try {
-    impResult.value = await $fetch("/api/manage/members/import", { method: "POST", body: { dryRun, rows: impRows.value }, headers: authHeaders() });
+    impResult.value = await $fetch("/api/manage/members/import", { method: "POST", body: { dryRun, rows: impRows.value, invite: impInvite.value }, headers: authHeaders() });
     if (!dryRun) {
       impRows.value = [];
       loadMembers();
@@ -360,6 +412,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         <datalist id="member-cohorts"><option v-for="c in cohorts" :key="c" :value="c" /></datalist>
         <div class="flex flex-wrap items-center gap-3 md:col-span-4">
           <button :disabled="oneBusy" class="btn-brand px-6 py-2.5 text-sm disabled:opacity-60">{{ oneBusy ? "กำลังเพิ่ม..." : "+ เพิ่มสมาชิก" }}</button>
+          <label class="flex items-center gap-2 text-sm text-slate-700"><input v-model="one.invite" type="checkbox" class="size-4" />ส่งอีเมลลิงก์เปิดใช้งานทันที (ถ้าใส่อีเมล)</label>
           <span v-if="oneMsg" class="text-sm" :class="oneMsg.ok ? 'text-green-700' : 'text-red-700'">{{ oneMsg.text }}</span>
         </div>
       </form>
@@ -377,9 +430,10 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
       <div v-if="impRows.length" class="mt-3 flex gap-2">
         <button :disabled="impBusy" class="rounded-full border border-navy-800 px-5 py-2 text-sm text-navy-800 disabled:opacity-60" @click="runImport(true)">ตรวจสอบก่อน (ยังไม่สร้าง)</button>
         <button :disabled="impBusy || !impResult || !impResult.dryRun || !impResult.create" class="btn-brand px-5 py-2 text-sm disabled:opacity-50" @click="runImport(false)">ยืนยันนำเข้า</button>
+        <label class="flex items-center gap-2 text-sm text-slate-700"><input v-model="impInvite" type="checkbox" class="size-4" />ส่งอีเมลลิงก์เปิดใช้งานให้ทุกคนที่มีอีเมลทันที</label>
       </div>
       <div v-if="impResult" class="mt-3 text-sm">
-        <p class="font-semibold text-navy-800">{{ impResult.dryRun ? "ผลตรวจสอบ: จะสร้างสมาชิกใหม่" : "สร้างสมาชิกแล้ว" }} {{ impResult.create }} คน{{ impResult.noEmail ? ` (ไม่มีอีเมล ${impResult.noEmail} คน)` : "" }} · ข้าม {{ impResult.skipped.length }} คน</p>
+        <p class="font-semibold text-navy-800">{{ impResult.dryRun ? "ผลตรวจสอบ: จะสร้างสมาชิกใหม่" : "สร้างสมาชิกแล้ว" }} {{ impResult.create }} คน{{ impResult.noEmail ? ` (ไม่มีอีเมล ${impResult.noEmail} คน)` : "" }}{{ !impResult.dryRun && impResult.invited ? ` · ส่งอีเมลเปิดใช้งานแล้ว ${impResult.invited} คน` : "" }} · ข้าม {{ impResult.skipped.length }} คน</p>
         <ul class="mt-1 list-disc pl-5 text-slate-600">
           <li v-for="(k, i) in impResult.skipped" :key="i">{{ k.name }}: {{ k.reason }}</li>
         </ul>
@@ -394,6 +448,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
           <option value="">ทุกรุ่น</option>
           <option v-for="c in cohorts" :key="c" :value="c">{{ c }}</option>
         </select>
+        <button :disabled="bulkBusy" class="rounded-full bg-navy-800 px-4 py-2 text-xs text-white disabled:opacity-60" @click="bulkSend">{{ bulkBusy ? "กำลังส่ง..." : `ส่งอีเมลลิงก์เปิดใช้งาน${cohortFilter ? ` · ${cohortFilter}` : " (ทุกรุ่น)"}` }}</button>
         <button class="rounded-full border border-navy-800 px-4 py-2 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="bulkLinks">ดาวน์โหลดลิงก์เปิดใช้งาน (CSV){{ cohortFilter ? ` · ${cohortFilter}` : "" }}</button>
       </div>
       <p v-if="!members.length" class="mt-4 text-sm text-slate-500">ยังไม่มีสมาชิก</p>
@@ -432,7 +487,11 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
 
                   <div v-if="!m.admin">
                     <p class="font-semibold text-navy-800">เปิดใช้งานบัญชี <span class="text-xs font-normal text-slate-500">({{ m.activated ? "เปิดใช้งานแล้ว สร้างลิงก์ใหม่ได้ถ้าสมาชิกลืมรหัสผ่าน" : "ส่งลิงก์นี้ให้เจ้าของบัญชีเพื่อตั้งรหัสผ่านเอง" }})</span></p>
-                    <button class="mt-2 rounded-full border border-navy-800 px-4 py-1.5 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="makeLink(m)">สร้างลิงก์เปิดใช้งาน (อายุ 14 วัน)</button>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                      <button :disabled="sendingLink" class="rounded-full bg-navy-800 px-4 py-1.5 text-xs text-white disabled:opacity-60" @click="sendLink(m)">{{ sendingLink ? "กำลังส่ง..." : `ส่งลิงก์ทางอีเมล${pf.email.trim() ? ` → ${pf.email.trim()}` : ""}` }}</button>
+                      <button class="rounded-full border border-navy-800 px-4 py-1.5 text-xs text-navy-800 hover:bg-navy-800 hover:text-white" @click="makeLink(m)">สร้างลิงก์ (คัดลอกส่งเอง)</button>
+                    </div>
+                    <p class="mt-1 text-xs text-slate-500">ลิงก์อายุ 14 วัน ใช้ได้ครั้งเดียว</p>
                     <div v-if="link" class="mt-2 flex flex-wrap items-center gap-2">
                       <input :value="link.url" readonly class="field max-w-xl flex-1 text-xs" @focus="($event.target as HTMLInputElement).select()" />
                       <button class="rounded-full bg-navy-800 px-4 py-1.5 text-xs text-white" @click="copyLink">คัดลอก</button>
