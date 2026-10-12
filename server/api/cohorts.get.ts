@@ -1,2 +1,5 @@
-// รุ่นทั้งหมด (สำหรับหน้าที่เรนเดอร์ฝั่งเบราว์เซอร์ เช่น ฟอร์มสมัคร/แอดมิน — ไม่ต้องโหลดฐานข้อมูลเนื้อหาทั้งก้อนลงเบราว์เซอร์)
-export default defineEventHandler((event) => getCohorts(event));
+// รุ่นทั้งหมด (สด จากฐานข้อมูล) — ห้ามแคช เพื่อให้แก้ในแอดมินแล้วเห็นทันที
+export default defineEventHandler((event) => {
+  setResponseHeader(event, "cache-control", "no-store");
+  return getCohorts(event);
+});

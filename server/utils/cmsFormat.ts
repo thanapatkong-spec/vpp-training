@@ -27,10 +27,10 @@ function clean(f: CmsField, v: unknown): unknown {
   }
 }
 
-function cleanFields(fields: CmsField[], values: Record<string, unknown>) {
+export function cleanFields(fields: CmsField[], values: Record<string, unknown>) {
   const out: Record<string, unknown> = {};
   for (const f of fields) {
-    if (f.type === "markdown") continue;
+    if (f.type === "markdown" || f.type === "section") continue;
     const v = clean(f, values[f.name]);
     if (v === undefined) continue;
     if ((f.type === "images" || f.type === "list") && !(v as unknown[]).length) continue;
@@ -41,7 +41,7 @@ function cleanFields(fields: CmsField[], values: Record<string, unknown>) {
 
 export function validate(col: CmsCollection, values: Record<string, unknown>): string | null {
   for (const f of col.fields) {
-    if (!f.required || f.type === "markdown" || f.type === "boolean") continue;
+    if (!f.required || f.type === "markdown" || f.type === "boolean" || f.type === "section") continue;
     const v = clean(f, values[f.name]);
     if (v === undefined || (Array.isArray(v) && !v.length)) return `กรุณากรอก "${f.label}"`;
     if (f.type === "date" && !/^\d{4}-\d{2}-\d{2}$/.test(String(v))) return `"${f.label}" ต้องเป็นวันที่`;

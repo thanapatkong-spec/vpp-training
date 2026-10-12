@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { CheckCircle2, Mail } from "lucide-vue-next";
-import { APP_DOCS, APP_STATUS, APPLY_PACKAGES, ApplicationInput, EDUCATION, PREFIXES, validThaiId, type AppDocKind } from "#shared/application";
+import { APP_DOCS, APP_STATUS, APPLY_PACKAGES, ApplicationInput, validThaiId, type AppDocKind } from "#shared/application";
+import { textsOf } from "#shared/siteSettings";
 import { baht } from "#shared/config";
 import { cohortPackages } from "#shared/cohorts";
 
@@ -10,13 +11,22 @@ const sessionState = auth.useSession();
 const session = computed(() => sessionState.value.data);
 const isPending = computed(() => sessionState.value.isPending);
 const route = useRoute();
-const cohorts = await useCohorts({ api: true });
+const [cohorts, site] = await Promise.all([useCohorts(), useSiteSettings()]);
+const PREFIXES = computed(() => textsOf(site.value.formPrefixes));
+const EDUCATION = computed(() => textsOf(site.value.formEducation));
+// ใบสมัครแยกตามรุ่น: /apply?cohort=<รหัส> = ใบของรุ่นนั้น · /apply = รายการใบสมัครของฉัน (หรือฟอร์มถ้ายังไม่เคยสมัคร)
+type MyApp = { id: string; cohortId: string; packageId: string; status: string; updatedAt: string; paid: boolean };
+const myApps = ref<MyApp[]>([]);
 const openCohorts = computed(() => cohorts.value.filter((c) => c.status === "open"));
-const firstCohort = () => openCohorts.value.find((c) => c.id === route.query.cohort)?.id || openCohorts.value[0]?.id || "";
+// รุ่นที่ยังสมัครได้ = เปิดรับ และยังไม่มีใบสมัครที่ใช้งานอยู่ (ไม่ผ่าน = สมัครใหม่ได้)
+const canApply = (id: string) => !myApps.value.some((a) => a.cohortId === id && a.status !== "rejected");
+const firstCohort = () => openCohorts.value.find((c) => c.id === route.query.cohort)?.id || openCohorts.value.find((c) => canApply(c.id))?.id || "";
 
 type Pay = { id: string; amount: number; status: string; note: string | null; transRef: string | null; createdAt: string; paidAt: string | null };
 type Existing = { id: string; status: string; adminNote: string | null; files: { id: string; kind: string; name: string; status: string; note: string | null }[]; payment?: { amount: number; paid: boolean; pending: boolean; history: Pay[]; promptpay: { payload: string; name: string } | null; autoCheck: boolean } } & Record<string, any>;
 const existing = ref<Existing | null>(null);
+const cohortCtx = computed(() => String(route.query.cohort || ""));
+const appUrl = (cohort: string) => `/api/me/application?cohort=${encodeURIComponent(cohort)}`;
 const loaded = ref(false);
 
 const DRAFT_KEY = "vpp-apply-draft";
@@ -47,9 +57,13 @@ const editable = computed(() => !existing.value || ["needs_changes", "rejected"]
 const fileState = (kind: string) => existing.value?.status === "needs_changes" ? existing.value.files.find((x) => x.kind === kind) : undefined;
 const needsFile = (kind: AppDocKind) => !fileState(kind) || fileState(kind)!.status === "rejected";
 
+const showForm = ref(false); // /apply ที่มีใบสมัครแล้ว: กด "สมัครรุ่นอื่น" เพื่อเปิดฟอร์ม
 async function load() {
+  existing.value = null;
+  done.value = false;
   try {
-    existing.value = await $fetch<Existing | null>("/api/me/application");
+    if (cohortCtx.value) existing.value = await $fetch<Existing | null>(appUrl(cohortCtx.value));
+    myApps.value = await $fetch<MyApp[]>("/api/me/applications");
   } catch {}
   if (existing.value && editable.value) {
     for (const k of Object.keys(blank())) if (k in existing.value && existing.value[k] != null) (f as any)[k] = existing.value[k];
@@ -68,6 +82,14 @@ async function load() {
   }
   loaded.value = true;
 }
+// สลับรุ่น (เช่น กดเมนู "สมัครเรียน" ขณะดูใบสมัครของรุ่นหนึ่ง) → โหลดใหม่
+watch(cohortCtx, () => {
+  if (!session.value) return;
+  showForm.value = false;
+  Object.assign(f, blank());
+  loaded.value = false;
+  load();
+});
 watchEffect(() => {
   if (isPending.value || loaded.value) return;
   if (session.value) load();
@@ -133,8 +155,11 @@ async function submit() {
   try {
     await $fetch("/api/me/application", { method: "POST", body: fd });
     try { localStorage.removeItem(DRAFT_KEY); } catch {}
+    const sentCohort = f.cohortId;
+    if (cohortCtx.value !== sentCohort) await navigateTo({ query: { cohort: sentCohort } }, { replace: true });
+    existing.value = await $fetch<Existing | null>(appUrl(sentCohort));
+    myApps.value = await $fetch<MyApp[]>("/api/me/applications").catch(() => myApps.value);
     done.value = true;
-    existing.value = await $fetch<Existing | null>("/api/me/application");
     window.scrollTo({ top: 0, behavior: "smooth" });
   } catch (e: any) {
     const fe = e?.data?.data?.fieldErrors as Record<string, string> | undefined;
@@ -150,10 +175,10 @@ async function submit() {
 }
 
 // รุ่นที่เลือกได้: รุ่นที่เปิดรับ + รุ่นเดิมของใบสมัครที่ขอแก้ไข (แม้ปิดรับแล้ว)
-const cohortChoices = computed(() => cohorts.value.filter((c) => c.status === "open" || c.id === existing.value?.cohortId));
+const cohortChoices = computed(() => cohorts.value.filter((c) => (c.status === "open" && canApply(c.id)) || c.id === existing.value?.cohortId));
 const selCohort = computed(() => cohorts.value.find((c) => c.id === f.cohortId));
 const headCohort = computed(() => selCohort.value ?? openCohorts.value[0]);
-const packages = computed(() => cohortPackages(selCohort.value));
+const packages = computed(() => cohortPackages(selCohort.value, site.value));
 const pkg = computed(() => packages.value.find((p) => p.id === f.packageId));
 const applyPackages = computed(() => APPLY_PACKAGES.map((id) => packages.value.find((p) => p.id === id)!));
 
@@ -171,21 +196,24 @@ async function sendSlip() {
   payMsg.value = null;
   if (!slip.value) return (payMsg.value = { ok: false, text: "กรุณากดปุ่ม \"แนบสลิป\" แล้วเลือกรูปสลิป" });
   const fd = new FormData();
+  fd.append("cohort", existing.value!.cohortId);
   fd.append("slip", await shrinkImage(slip.value, 2 * 1024 * 1024));
   paying.value = true;
   try {
     const r = await $fetch<{ status: string }>("/api/me/payment", { method: "POST", body: fd });
     payMsg.value = { ok: true, text: r.status === "paid" ? "ชำระเงินสำเร็จ ระบบส่งอีเมลยืนยันให้แล้ว" : "ส่งสลิปแล้ว ทีมงานจะตรวจสอบและยืนยันทางอีเมล" };
     slip.value = undefined;
-    existing.value = await $fetch<Existing | null>("/api/me/application");
+    existing.value = await $fetch<Existing | null>(appUrl(existing.value!.cohortId));
   } catch (e: any) {
     payMsg.value = { ok: false, text: e?.data?.message || "ส่งสลิปไม่สำเร็จ" };
-    existing.value = await $fetch<Existing | null>("/api/me/application").catch(() => existing.value);
+    existing.value = await $fetch<Existing | null>(appUrl(existing.value!.cohortId)).catch(() => existing.value);
   } finally {
     paying.value = false;
   }
 }
 const idHint = computed(() => (f.nationalId.replace(/\D/g, "").length === 13 && !validThaiId(f.nationalId.replace(/\D/g, "")) ? "เลขบัตรไม่ถูกต้อง ตรวจสอบอีกครั้ง" : ""));
+const cohortName = (id: string) => cohorts.value.find((c) => c.id === id)?.name || id;
+const pkgShort = (id: string) => cohortPackages(undefined, site.value).find((p) => p.id === id)?.short || id;
 const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" }) : "-");
 </script>
 
@@ -204,14 +232,37 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
       </div>
     </section>
 
+    <!-- ใบสมัครของฉัน (ทุกรุ่น) -->
+    <section v-else-if="loaded && !cohortCtx && myApps.length && !showForm" class="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+      <h2 class="text-xl font-bold text-navy-800">ใบสมัครของฉัน</h2>
+      <ul class="mt-4 divide-y divide-sky-card">
+        <li v-for="a in myApps" :key="a.id">
+          <NuxtLink :to="`/apply?cohort=${encodeURIComponent(a.cohortId)}`" class="flex flex-wrap items-center justify-between gap-2 py-3 hover:text-brand">
+            <span>
+              <b class="text-navy-800">{{ cohortName(a.cohortId) }}</b>
+              <span class="text-xs text-slate-500"> · {{ pkgShort(a.packageId) }} · {{ fmt(a.updatedAt) }}</span>
+            </span>
+            <span class="flex items-center gap-2">
+              <span v-if="a.paid" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ชำระแล้ว</span>
+              <span class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="APP_STATUS[a.status]?.[1]">{{ APP_STATUS[a.status]?.[0] }}</span>
+              <span class="text-sm text-navy-800">ดู →</span>
+            </span>
+          </NuxtLink>
+        </li>
+      </ul>
+      <button v-if="openCohorts.some((c) => canApply(c.id))" class="btn-brand mt-5 px-6 py-2.5 text-sm" @click="Object.assign(f, blank()); f.cohortId = firstCohort(); showForm = true">+ สมัครรุ่นอื่น</button>
+      <p v-else class="mt-4 text-sm text-slate-500">ยังไม่มีรุ่นอื่นที่เปิดรับสมัครในขณะนี้</p>
+    </section>
+
     <!-- สถานะใบสมัครที่ส่งแล้ว -->
     <section v-else-if="loaded && existing && (!editable || done)" class="mt-8 rounded-3xl bg-white p-6 shadow-sm">
+      <NuxtLink v-if="myApps.length > 1" to="/apply" class="mb-3 inline-block text-sm text-navy-800">← ใบสมัครของฉันทั้งหมด</NuxtLink>
       <p v-if="done" class="mb-4 flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-800"><CheckCircle2 class="size-5" />ส่งใบสมัครเรียบร้อยแล้ว ทีมงานจะตรวจสอบและแจ้งผล</p>
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-xl font-bold text-navy-800">สถานะใบสมัคร</h2>
         <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="APP_STATUS[existing.status]?.[1]">{{ APP_STATUS[existing.status]?.[0] }}</span>
       </div>
-      <p class="mt-2 text-sm text-slate-600">{{ existing.prefix }}{{ existing.firstName }} {{ existing.lastName }} · ส่งเมื่อ {{ fmt(existing.updatedAt) }}</p>
+      <p class="mt-2 text-sm text-slate-600"><b class="text-navy-800">{{ cohortName(existing.cohortId) }}</b> · {{ existing.prefix }}{{ existing.firstName }} {{ existing.lastName }} · ส่งเมื่อ {{ fmt(existing.updatedAt) }}</p>
       <p v-if="existing.adminNote" class="mt-2 rounded-2xl bg-sky-soft px-4 py-2 text-sm text-slate-700">หมายเหตุจากทีมงาน: {{ existing.adminNote }}</p>
       <!-- ชำระค่าเรียน -->
       <div v-if="existing.status === 'approved' && existing.payment" class="mt-5 rounded-2xl border-2 p-5" :class="existing.payment.paid ? 'border-green-300 bg-green-50' : 'border-brand bg-orange-50/40'">

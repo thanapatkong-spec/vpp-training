@@ -54,11 +54,13 @@ function newRow() {
 
 <template>
   <div>
-    <label v-if="field.type !== 'boolean'" class="block text-sm font-semibold text-navy-800">
+    <h3 v-if="field.type === 'section'" class="border-b border-sky-card pb-1 pt-4 text-lg font-bold text-navy-800">{{ field.label }}</h3>
+    <label v-else-if="field.type !== 'boolean'" class="block text-sm font-semibold text-navy-800">
       {{ field.label }}<span v-if="field.required" class="text-red-600"> *</span>
     </label>
 
-    <input v-if="field.type === 'string'" :value="modelValue ?? ''" class="field mt-1" @input="set(($event.target as HTMLInputElement).value)" />
+    <template v-if="field.type === 'section'" />
+    <input v-else-if="field.type === 'string'" :value="modelValue ?? ''" class="field mt-1" @input="set(($event.target as HTMLInputElement).value)" />
     <textarea v-else-if="field.type === 'text'" :value="modelValue ?? ''" rows="4" class="field mt-1" @input="set(($event.target as HTMLTextAreaElement).value)" />
     <input v-else-if="field.type === 'date'" type="date" :value="modelValue ?? ''" class="field mt-1 max-w-[12rem]" @input="set(($event.target as HTMLInputElement).value)" />
     <input v-else-if="field.type === 'number'" type="number" :value="modelValue ?? ''" class="field mt-1 max-w-[8rem]" @input="set(($event.target as HTMLInputElement).value)" />

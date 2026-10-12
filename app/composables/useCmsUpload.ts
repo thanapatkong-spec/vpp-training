@@ -1,4 +1,4 @@
-// อัปโหลดรูป/ไฟล์ผ่านหน้าแอดมิน (commit ไป public/uploads) + เก็บ preview ชั่วคราวระหว่างรอเว็บ deploy
+// อัปโหลดรูป/ไฟล์ผ่านหน้าแอดมิน (ใช้ได้ทันที) + เก็บ preview ระหว่างแก้ไข
 export function useCmsUpload(authHeaders: () => Record<string, string> | undefined) {
   const previews = useState<Record<string, string>>("cms-previews", () => ({}));
   async function upload(file: File): Promise<string> {

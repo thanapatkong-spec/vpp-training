@@ -7,11 +7,13 @@ export default defineEventHandler(async (event) => {
   const u = await requireUser(event);
   const { values, docs } = await readApplicationForm(event);
   const db = useDb()!;
-  const [cur] = await db.select().from(applications).where(eq(applications.userId, u.id)).orderBy(desc(applications.createdAt)).limit(1);
+  // ใบสมัครแยกตามรุ่น: ดูเฉพาะใบล่าสุดของรุ่นที่สมัคร (สมัครหลายรุ่นได้)
+  const [cur] = await db.select().from(applications).where(and(eq(applications.userId, u.id), eq(applications.cohortId, values.cohortId))).orderBy(desc(applications.createdAt)).limit(1);
 
   if (cur && (cur.status === "submitted" || cur.status === "approved")) {
-    throw createError({ statusCode: 409, message: cur.status === "approved" ? "ใบสมัครของคุณผ่านการตรวจสอบแล้ว" : "ส่งใบสมัครแล้ว กรุณารอแอดมินตรวจสอบ" });
+    throw createError({ statusCode: 409, message: cur.status === "approved" ? "ใบสมัครรุ่นนี้ผ่านการตรวจสอบแล้ว" : "ส่งใบสมัครรุ่นนี้แล้ว กรุณารอแอดมินตรวจสอบ" });
   }
+  await checkFormOptions(values, cur?.status === "needs_changes" ? cur : {});
 
   // รุ่นต้องเปิดรับสมัครอยู่ (ยกเว้นส่งแก้ไขใบสมัครเดิมในรุ่นเดิม)
   const cohort = await getCohort(event, values.cohortId);

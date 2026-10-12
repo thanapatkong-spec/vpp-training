@@ -3,12 +3,10 @@ import { BookOpen } from "lucide-vue-next";
 
 useHead({ title: "บทความ · VPP" });
 
-const { data } = await useAsyncData("articles", () =>
-  queryCollection("articles").order("date", "DESC").all().then((r) => r.filter((a) => !a.draft)),
-);
-const cohorts = computed(() => [...new Set((data.value ?? []).map((a) => a.cohort).filter(Boolean))] as string[]);
+const data = await useContentList("articles"); // เรียงวันที่ใหม่สุดก่อน ไม่รวมฉบับร่าง
+const cohorts = computed(() => [...new Set(data.value.map((a) => a.cohort).filter(Boolean))] as string[]);
 const active = ref("");
-const list = computed(() => (data.value ?? []).filter((a) => !active.value || a.cohort === active.value));
+const list = computed(() => data.value.filter((a) => !active.value || a.cohort === active.value));
 const asset = useAsset();
 const fmt = (d: string) => new Date(d).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 </script>
@@ -29,8 +27,8 @@ const fmt = (d: string) => new Date(d).toLocaleDateString("th-TH", { year: "nume
     </div>
 
     <ul class="mt-6 space-y-4">
-      <li v-for="a in list" :key="a.path">
-        <NuxtLink :to="a.path" class="flex gap-4 rounded-2xl bg-white p-5 shadow-sm hover:shadow-md">
+      <li v-for="a in list" :key="a.slug">
+        <NuxtLink :to="`/articles/${a.slug}`" class="flex gap-4 rounded-2xl bg-white p-5 shadow-sm hover:shadow-md">
           <img v-if="a.cover" :src="asset(a.cover)" :alt="a.title" class="hidden size-24 shrink-0 rounded-xl object-cover sm:block" />
           <div class="min-w-0">
           <div class="flex flex-wrap items-center gap-2 text-xs text-slate-500">

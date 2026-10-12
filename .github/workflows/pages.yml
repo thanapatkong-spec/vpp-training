@@ -1,8 +1,10 @@
-name: Deploy to GitHub Pages
+name: GitHub Pages (redirect to Vercel)
 
+# เว็บหลักย้ายไป Vercel แล้ว — GitHub Pages เหลือแค่หน้าส่งต่อ ลิงก์เก่ายังใช้ได้ (พาไปหน้าเดียวกันบน Vercel)
 on:
   push:
     branches: [main]
+    paths: [".github/workflows/pages.yml"]
   workflow_dispatch:
 
 permissions:
@@ -18,18 +20,23 @@ jobs:
   build:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
-        with:
-          node-version: 22
-          cache: npm
-      - run: npm ci
-      - run: npx nuxt generate
-        env:
-          NUXT_APP_BASE_URL: /${{ github.event.repository.name }}/
+      - name: Build redirect page
+        run: |
+          mkdir site
+          cat > site/index.html <<'HTML'
+          <!doctype html><html lang="th"><head><meta charset="utf-8"><meta name="robots" content="noindex">
+          <title>VPP · ย้ายไปที่ใหม่</title>
+          <script>
+            var p = location.pathname.replace(/^\/vpp-training/, "") || "/";
+            location.replace("https://vpp-training.vercel.app" + p + location.search + location.hash);
+          </script>
+          <meta http-equiv="refresh" content="0; url=https://vpp-training.vercel.app/">
+          </head><body><p>เว็บไซต์ VPP ย้ายไปที่ <a href="https://vpp-training.vercel.app/">vpp-training.vercel.app</a></p></body></html>
+          HTML
+          cp site/index.html site/404.html
       - uses: actions/upload-pages-artifact@v3
         with:
-          path: .output/public
+          path: site
 
   deploy:
     needs: build

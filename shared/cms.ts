@@ -1,5 +1,5 @@
-// โครงสร้างเนื้อหาที่แก้ได้ในหน้าแอดมิน (ตรงกับ content.config.ts และ public/admin/config.yml)
-export type FieldType = "string" | "text" | "markdown" | "date" | "boolean" | "number" | "image" | "file" | "select" | "images" | "list";
+// โครงสร้างเนื้อหาที่แก้ได้ในหน้าแอดมิน (เก็บในฐานข้อมูล · ไฟล์ใน content/ เป็นข้อมูลตั้งต้น)
+export type FieldType = "string" | "text" | "markdown" | "date" | "boolean" | "number" | "image" | "file" | "select" | "images" | "list" | "section";
 
 export interface CmsField {
   name: string;
@@ -133,6 +133,42 @@ export const CMS_COLLECTIONS: CmsCollection[] = [
     titleField: "title", fields: pageFields,
   },
 ];
+
+const listF = (name: string, label: string, sub: CmsField[], hint?: string): CmsField => ({ name, label, type: "list", required: false, fields: sub, hint });
+const lineF = stringF("text", "ข้อความ");
+const sectionF = (label: string): CmsField => ({ name: `_${label}`, label, type: "section" });
+
+// ตั้งค่าเว็บไซต์: ข้อความที่เคยเขียนไว้ในโค้ด (เว้นว่าง = ใช้ค่าเดิม)
+CMS_COLLECTIONS.push({
+  name: "settings", label: "ตั้งค่าเว็บไซต์", kind: "files", dir: "settings", ext: "yml",
+  files: [{ name: "site", label: "ตั้งค่าเว็บไซต์ (ข้อความหน้าแรก, แพ็กเกจ, ติดต่อ, บัญชีรับเงิน, ฟอร์มสมัคร)" }],
+  titleField: "heroTitle",
+  fields: [
+    sectionF("ส่วนหัวหน้าแรก"),
+    stringF("heroTitle", "หัวข้อใหญ่ บรรทัด 1", false), stringF("heroTitle2", "หัวข้อใหญ่ บรรทัด 2 (สีส้ม)", false), textF("heroText", "คำอธิบายใต้หัวข้อ"),
+    stringF("heroCta", "ข้อความปุ่มสมัคร", false), stringF("heroBadgeTitle", "ป้ายบนรูป: หัวข้อ", false), stringF("heroBadgeText", "ป้ายบนรูป: ข้อความ", false),
+    sectionF("รุ่นและค่าอบรม"),
+    stringF("cohortsTitle", "หัวข้อส่วนรุ่นที่เปิดรับสมัคร", false), stringF("cohortsText", "คำอธิบายส่วนรุ่น", false), stringF("pricingTitle", "หัวข้อส่วนค่าอบรม", false),
+    stringF("pkgTheoryName", "ชื่อแพ็กเกจภาคทฤษฎี", false), stringF("pkgTheorySub", "คำอธิบายภาคทฤษฎี", false),
+    stringF("pkgPracticalName", "ชื่อแพ็กเกจภาคปฏิบัติ", false), stringF("pkgPracticalSub", "คำอธิบายภาคปฏิบัติ", false), stringF("pkgPracticalNote", "หมายเหตุภาคปฏิบัติ", false),
+    stringF("pkgBundleName", "ชื่อแพ็กเกจครบ 2 ภาค", false), stringF("pkgBundleHeadline", "หัวการ์ดแพ็กเกจครบ 2 ภาค", false),
+    sectionF("ปัญหา / ทำไมต้อง VPP"),
+    stringF("problemsTitle", "หัวข้อปัญหา", false), listF("problems", "รายการปัญหา", [lineF]), stringF("problemsFooter", "ข้อความใต้รายการปัญหา", false),
+    stringF("whyTitle", "หัวข้อทำไมต้อง VPP", false), listF("why", "เหตุผล (การ์ด 4 ใบ)", [stringF("title", "หัวข้อ"), textF("text", "คำอธิบาย")]),
+    stringF("certTitle", "กล่องใบประกาศ: หัวข้อ", false), textF("certText", "กล่องใบประกาศ: ข้อความ"),
+    stringF("legalTitle", "กล่องกฎหมาย: หัวข้อ", false), textF("legalText", "กล่องกฎหมาย: ข้อความ"),
+    sectionF("ติดต่อ / ท้ายเว็บ"),
+    stringF("contactTitle", "หัวข้อส่วนติดต่อ", false), textF("contactText", "ข้อความส่วนติดต่อ"),
+    stringF("contactLine", "LINE ID", false, "เช่น @dr.john"), stringF("contactEmail", "อีเมลติดต่อ", false), stringF("contactPhone", "เบอร์โทร", false),
+    stringF("footerTagline", "คำขวัญท้ายเว็บ", false), listF("footerAudience", "เหมาะสำหรับ (ท้ายเว็บ)", [lineF]),
+    sectionF("บัญชีรับเงินค่าเรียน (QR)"),
+    stringF("payName", "ชื่อบัญชีที่แสดง", false), stringF("payBank", "ธนาคาร/เลขบัญชีที่แสดง", false),
+    stringF("payBillerId", "QR ชำระบิล: Biller ID (15 หลัก)", false, "จาก QR ที่ธนาคารออกให้ (ค่าเดิมคือของ Dr.John Pet SCB)"), stringF("payRef1", "QR ชำระบิล: Ref1", false), stringF("payRef2", "QR ชำระบิล: Ref2", false), stringF("payTerminal", "QR ชำระบิล: Terminal", false),
+    stringF("payPromptpayId", "หรือใช้พร้อมเพย์ทั่วไป (เบอร์/เลขผู้เสียภาษี)", false, "ใส่ช่องนี้ = ใช้พร้อมเพย์แทน QR ชำระบิล · สแกนทดสอบทุกครั้งที่เปลี่ยน"),
+    sectionF("ตัวเลือกในฟอร์มสมัคร"),
+    listF("formPrefixes", "คำนำหน้าชื่อ", [lineF]), listF("formEducation", "วุฒิการศึกษา", [lineF]),
+  ],
+});
 
 export const findCollection = (name: string) => CMS_COLLECTIONS.find((c) => c.name === name);
 export const SLUG_RE = /^[a-z0-9][a-z0-9-]{0,80}$/;

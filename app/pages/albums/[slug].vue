@@ -4,13 +4,10 @@ import { ArrowLeft, ChevronLeft, ChevronRight, X } from "lucide-vue-next";
 const route = useRoute();
 const asset = useAsset();
 const slug = String(route.params.slug);
-const { data: album } = await useAsyncData(`album-${slug}`, () =>
-  queryCollection("albums").where("stem", "=", `albums/${slug}`).first(),
-);
-if (!album.value) throw createError({ statusCode: 404, statusMessage: "ไม่พบอัลบั้ม", fatal: true });
+const album = await useContentItem("albums", slug, "ไม่พบอัลบั้ม");
 useHead({ title: `${album.value.title} · VPP` });
 
-const photos = computed(() => album.value?.photos ?? []);
+const photos = computed<string[]>(() => album.value?.photos ?? []);
 const date = new Date(album.value.date).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 
 // lightbox

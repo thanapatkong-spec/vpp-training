@@ -1,4 +1,4 @@
-import { boolean, customType, date, integer, pgEnum, pgTable, text, timestamp, uuid } from "drizzle-orm/pg-core";
+import { boolean, customType, date, integer, jsonb, pgEnum, pgTable, primaryKey, text, timestamp, uuid } from "drizzle-orm/pg-core";
 
 export const packageEnum = pgEnum("package_id", ["theory", "practical", "bundle"]);
 export const paymentStatus = pgEnum("payment_status", ["pending", "confirmed", "rejected"]);
@@ -210,4 +210,50 @@ export const payments = pgTable("payments", {
   note: text("note"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   paidAt: timestamp("paid_at", { withTimezone: true }),
+});
+
+// รุ่นที่เปิดรับสมัคร (แก้ในหน้าแอดมิน มีผลทันที) — id = รหัสรุ่น เช่น 2569-11 ที่ใบสมัครอ้างถึง
+// ครั้งแรกระบบคัดลอกจาก content/cohorts/*.yml ให้อัตโนมัติ · ลบ = ตั้ง deletedAt (กันคัดลอกซ้ำ)
+export const cohorts = pgTable("cohorts", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  status: text("status").notNull().default("open"), // open | full | closed | hidden
+  seats: integer("seats"),
+  dates: text("dates"),
+  order: integer("sort_order").notNull().default(100),
+  priceTheory: integer("price_theory").notNull().default(0),
+  pricePractical: integer("price_practical").notNull().default(0),
+  priceBundle: integer("price_bundle").notNull().default(0),
+  sessions: jsonb("sessions").$type<{ icon?: string; title: string; date?: string; time?: string; extra?: string }[]>().notNull().default([]),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+});
+
+// เนื้อหาเว็บ (บทความ, FAQ, เอกสารแนบ, อัลบั้ม, หน้าเนื้อหา, ตั้งค่าเว็บไซต์) — แก้ในหน้าแอดมิน มีผลทันที
+// ครั้งแรกระบบคัดลอกจากไฟล์ใน content/ ให้อัตโนมัติ · ลบ = ตั้ง deletedAt
+export const contentItems = pgTable("content_items", {
+  collection: text("collection").notNull(),
+  slug: text("slug").notNull(),
+  data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
+  body: text("body"), // Markdown (บทความ/หน้าเนื้อหา)
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
+  deletedAt: timestamp("deleted_at", { withTimezone: true }),
+}, (t) => [primaryKey({ columns: [t.collection, t.slug] })]);
+
+// หมวดเนื้อหาที่คัดลอกจากไฟล์แล้ว (กันคัดลอกซ้ำหลังแอดมินลบทุกรายการ)
+export const contentSeeds = pgTable("content_seeds", {
+  collection: text("collection").primaryKey(),
+  seededAt: timestamp("seeded_at", { withTimezone: true }).notNull().defaultNow(),
+});
+
+// รูป/ไฟล์ที่อัปโหลดผ่านหน้าแอดมิน (เมื่อไม่ได้ตั้ง Vercel Blob)
+export const media = pgTable("media", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  name: text("name").notNull(),
+  contentType: text("content_type").notNull(),
+  size: integer("size").notNull(),
+  data: bytea("data").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
 });

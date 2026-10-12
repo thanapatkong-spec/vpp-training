@@ -1,11 +1,8 @@
 <script setup lang="ts">
-// หน้าเนื้อหาคงที่จาก content/pages/<slug>.md
+// หน้าเนื้อหาคงที่ (แก้ในหน้าแอดมิน > เนื้อหาเว็บ > หน้าเนื้อหา)
 const props = defineProps<{ slug: string }>();
 const asset = useAsset();
-const { data: page } = await useAsyncData(`page-${props.slug}`, () =>
-  queryCollection("pages").path(`/pages/${props.slug}`).first(),
-);
-if (!page.value) throw createError({ statusCode: 404, statusMessage: "ไม่พบหน้านี้", fatal: true });
+const page = await useContentItem("pages", props.slug, "ไม่พบหน้านี้");
 useHead({ title: `${page.value.title} · VPP` });
 </script>
 
@@ -20,7 +17,7 @@ useHead({ title: `${page.value.title} · VPP` });
     </section>
     <article class="mx-auto w-full max-w-3xl px-5 py-10">
       <img v-if="page.cover" :src="asset(page.cover)" :alt="page.title" class="mb-8 w-full rounded-2xl" />
-      <div class="prose-vpp"><ContentRenderer :value="page" /></div>
+      <div class="prose-vpp" v-html="page.html" />
       <div class="mt-10 rounded-2xl bg-sky-soft p-6 text-center">
         <p class="font-semibold text-navy-800">สนใจสมัครเรียนหรืออยากสอบถามเพิ่มเติม?</p>
         <NuxtLink to="/#contact" class="btn-brand mt-3 px-6 py-2.5 text-sm">ติดต่อทีมงาน</NuxtLink>

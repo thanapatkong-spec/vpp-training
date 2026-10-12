@@ -1,8 +1,7 @@
 import { z } from "zod";
 
 // ใบสมัครเรียน VPP: ตัวเลือกและกฎตรวจข้อมูล (ใช้ทั้งหน้าเว็บและเซิร์ฟเวอร์)
-export const PREFIXES = ["นาย", "นาง", "นางสาว"] as const;
-export const EDUCATION = ["มัธยมศึกษาปีที่ 6", "ปวช.", "ปวส.", "ปริญญาตรี", "สูงกว่าปริญญาตรี", "อื่นๆ (เทียบเท่า ม.6)"] as const;
+// ตัวเลือกคำนำหน้า/วุฒิการศึกษาแก้ได้ในตั้งค่าเว็บไซต์ (เซิร์ฟเวอร์ตรวจกับรายการปัจจุบัน)
 export const APPLY_PACKAGES = ["bundle", "theory"] as const; // ลำดับที่แสดงในฟอร์มสมัคร
 export const APP_DOCS = [
   { kind: "id_card", label: "สำเนาบัตรประชาชน" },
@@ -32,7 +31,7 @@ export const ApplicationInput = z
     cohortId: req("กรุณาเลือกรุ่น", 40),
     // ภาคปฏิบัติสมัครอย่างเดียวไม่ได้ ต้องเรียนคู่กับภาคทฤษฎี (แพ็กเกจครบ 2 ภาค)
     packageId: z.enum(["theory", "bundle"], { message: "กรุณาเลือกแพ็กเกจ (ภาคปฏิบัติต้องเรียนคู่กับภาคทฤษฎี)" }),
-    prefix: z.enum(PREFIXES, { message: "กรุณาเลือกคำนำหน้า" }),
+    prefix: req("กรุณาเลือกคำนำหน้า", 40),
     firstName: req("กรุณากรอกชื่อ", 100),
     lastName: req("กรุณากรอกนามสกุล", 100),
     nationalId: z.string().trim().transform((s) => s.replace(/[\s-]/g, "")).refine(validThaiId, "เลขบัตรประชาชนไม่ถูกต้อง"),
@@ -40,7 +39,7 @@ export const ApplicationInput = z
     phone: z.string().trim().regex(/^0\d[\d -]{7,11}$/, "เบอร์โทรไม่ถูกต้อง"),
     lineId: opt(60),
     address: opt(500),
-    education: z.enum(EDUCATION, { message: "กรุณาเลือกวุฒิการศึกษา" }),
+    education: req("กรุณาเลือกวุฒิการศึกษา", 120),
     school: opt(200),
     workplace: opt(200),
     position: opt(100),

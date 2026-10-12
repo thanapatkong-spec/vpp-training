@@ -385,7 +385,6 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
     <ApplicationsAdmin v-if="!forbidden && tab === 'applications'" :auth-headers="authHeaders" />
     <PaymentsAdmin v-if="!forbidden && tab === 'payments'" :auth-headers="authHeaders" />
     <CmsEditor v-if="!forbidden && tab === 'content'" :auth-headers="authHeaders" />
-    <p v-if="!forbidden && tab === 'content'" class="mt-6 text-xs text-slate-500">ต้องตั้งค่า <code>GITHUB_TOKEN</code> บน Vercel ก่อนใช้งาน (ดู docs/members-setup.md) · หน้าจัดการแบบเดิม (สำรอง): <a :href="asset('/admin/')" target="_blank" class="underline">/admin/</a></p>
 
     <p v-if="!forbidden && tab === 'claims' && loaded && !rows.length" class="mt-6 text-sm text-slate-500">ยังไม่มีคำขอ</p>
     <ul v-if="tab === 'claims'" class="mt-6 space-y-4">
