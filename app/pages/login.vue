@@ -34,7 +34,7 @@ const google = () => auth.signIn.social({ provider: "google", callbackURL: nextU
       <p v-if="config.public.googleLogin" class="my-4 text-center text-xs text-slate-400">หรือใช้อีเมล</p>
       <form class="mt-5 space-y-3" @submit.prevent="submit">
         <input id="email" v-model="email" type="email" class="field" placeholder="อีเมล" required autocomplete="email" />
-        <input id="password" v-model="password" type="password" class="field" placeholder="รหัสผ่าน" required autocomplete="current-password" />
+        <PasswordInput id="password" v-model="password" placeholder="รหัสผ่าน" required autocomplete="current-password" />
         <p v-if="error" class="rounded-2xl bg-red-50 px-4 py-2 text-sm text-red-700">{{ error }}</p>
         <button :disabled="pending" class="btn-brand w-full py-3 disabled:opacity-60">{{ pending ? "กำลังเข้าสู่ระบบ..." : "เข้าสู่ระบบ" }}</button>
       </form>

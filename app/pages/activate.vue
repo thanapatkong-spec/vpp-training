@@ -49,8 +49,8 @@ async function submit() {
       <form v-else-if="info" class="mt-4 space-y-3" @submit.prevent="submit">
         <p class="text-sm text-slate-600">สวัสดีคุณ <b class="text-navy-800">{{ info.name }}</b><span v-if="!info.needsEmail"> · อีเมลของคุณ {{ info.maskedEmail }}</span><br />ตั้งรหัสผ่านเพื่อเริ่มใช้งานบัญชีนี้ (ดาวน์โหลดใบประกาศ ฯลฯ)</p>
         <input v-if="info.needsEmail" id="email" v-model="email" type="email" class="field" placeholder="อีเมลที่ใช้เข้าสู่ระบบ *" required autocomplete="email" />
-        <input id="password" v-model="password" type="password" class="field" placeholder="ตั้งรหัสผ่าน (อย่างน้อย 8 ตัวอักษร) *" minlength="8" required autocomplete="new-password" />
-        <input id="confirm" v-model="confirm" type="password" class="field" placeholder="ยืนยันรหัสผ่านอีกครั้ง *" minlength="8" required autocomplete="new-password" />
+        <PasswordInput id="password" v-model="password" placeholder="ตั้งรหัสผ่าน (อย่างน้อย 8 ตัวอักษร) *" minlength="8" required autocomplete="new-password" />
+        <PasswordInput id="confirm" v-model="confirm" placeholder="ยืนยันรหัสผ่านอีกครั้ง *" minlength="8" required autocomplete="new-password" />
         <label class="flex items-start gap-2 text-xs text-slate-600">
           <input v-model="consent" type="checkbox" class="mt-0.5" />
           <span>ฉันได้อ่านและยอมรับ <NuxtLink to="/privacy" target="_blank" class="underline">นโยบายความเป็นส่วนตัว</NuxtLink></span>

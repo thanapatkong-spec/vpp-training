@@ -285,7 +285,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
     <div v-if="forbidden" class="mt-6 rounded-2xl bg-red-50 px-4 py-4 text-sm text-red-700">
       <p>หน้านี้สำหรับแอดมินเท่านั้น: อีเมลต้องอยู่ในรายชื่อแอดมิน และยืนยันอีเมลแล้ว หรือกรอกรหัสแอดมินด้านล่าง</p>
       <form class="mt-3 flex flex-wrap gap-2" @submit.prevent="submitKey">
-        <input v-model="keyInput" type="password" autocomplete="off" class="field max-w-xs" placeholder="รหัสแอดมิน (ADMIN_KEY)" />
+        <PasswordInput v-model="keyInput" autocomplete="off" wrap-class="w-full max-w-xs" placeholder="รหัสแอดมิน (ADMIN_KEY)" />
         <button class="btn-brand px-5 py-2 text-sm">เข้าใช้งาน</button>
       </form>
     </div>
