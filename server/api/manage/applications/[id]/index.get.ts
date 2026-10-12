@@ -7,14 +7,15 @@ export default defineEventHandler(async (event) => {
   await requireAdmin(event);
   const id = getRouterParam(event, "id")!;
   const db = useDb()!;
-  const [app] = await db.select({ app: applications, email: user.email }).from(applications).innerJoin(user, eq(user.id, applications.userId)).where(eq(applications.id, id)).limit(1);
-  if (!app) throw createError({ statusCode: 404, message: "ไม่พบใบสมัคร" });
-  const files = await db
+  const [[app], files, pays] = await Promise.all([
+    db.select({ app: applications, email: user.email }).from(applications).innerJoin(user, eq(user.id, applications.userId)).where(eq(applications.id, id)).limit(1),
+    db
     .select({ id: applicationFiles.id, kind: applicationFiles.kind, name: applicationFiles.name, contentType: applicationFiles.contentType, size: applicationFiles.size, status: applicationFiles.status, note: applicationFiles.note })
     .from(applicationFiles)
-    .where(eq(applicationFiles.applicationId, id));
-  const pays = await db
-    .select({ id: payments.id, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, verifiedBy: payments.verifiedBy, createdAt: payments.createdAt, paidAt: payments.paidAt, hasSlip: payments.slipType })
-    .from(payments).where(eq(payments.applicationId, id)).orderBy(desc(payments.createdAt));
+    .where(eq(applicationFiles.applicationId, id)),
+    db.select({ id: payments.id, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, verifiedBy: payments.verifiedBy, createdAt: payments.createdAt, paidAt: payments.paidAt, hasSlip: payments.slipType })
+    .from(payments).where(eq(payments.applicationId, id)).orderBy(desc(payments.createdAt)),
+  ]);
+  if (!app) throw createError({ statusCode: 404, message: "ไม่พบใบสมัคร" });
   return { ...app.app, email: app.email, files, payments: pays, amount: await priceOf(event, app.app.cohortId, app.app.packageId) };
 });

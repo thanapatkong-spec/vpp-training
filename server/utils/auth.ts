@@ -24,6 +24,8 @@ function create(db: NonNullable<ReturnType<typeof useDb>>) {
     database: drizzleAdapter(db, { provider: "pg", schema: { user, session, account, verification } }),
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: process.env.BETTER_AUTH_URL,
+    // เก็บข้อมูล session (ลงลายเซ็น) ในคุกกี้ 5 นาที — ไม่ต้องถามฐานข้อมูลทุกครั้งที่เรียก API
+    session: { cookieCache: { enabled: true, maxAge: 5 * 60 } },
     emailAndPassword: {
       enabled: true,
       minPasswordLength: 8,
