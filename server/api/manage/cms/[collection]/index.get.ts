@@ -1,4 +1,5 @@
 import { findCollection } from "#shared/cms";
+import { COHORT_STATUS, type CohortStatus } from "#shared/cohorts";
 
 // แอดมิน: รายการเนื้อหาในหมวด (ชื่อ + ค่าสำหรับเรียงลำดับ)
 export default defineEventHandler(async (event) => {
@@ -14,7 +15,7 @@ export default defineEventHandler(async (event) => {
       let v: Record<string, unknown> = {};
       try { v = parseEntry(col, f.content.toString("utf8")); } catch {}
       const label = col.kind === "files" ? col.files!.find((x) => x.name === slug)!.label : String(v[col.titleField] ?? slug);
-      return { slug, title: label, sort: col.sortField ? (v[col.sortField] as string | number | undefined) ?? null : null, draft: v.draft === true, sub: v.cohort ? String(v.cohort) : undefined };
+      return { slug, title: label, sort: col.sortField ? (v[col.sortField] as string | number | undefined) ?? null : null, draft: v.draft === true, sub: col.name === "cohorts" ? `${slug} · ${COHORT_STATUS[(v.status as CohortStatus) || "open"] ?? v.status}` : v.cohort ? String(v.cohort) : undefined };
     }),
   );
   const rows = items.filter((x): x is NonNullable<typeof x> => !!x);

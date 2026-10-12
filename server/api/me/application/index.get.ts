@@ -17,7 +17,7 @@ export default defineEventHandler(async (event) => {
     .from(payments)
     .where(eq(payments.applicationId, app.id))
     .orderBy(desc(payments.createdAt));
-  const amount = priceOf(app.packageId);
+  const amount = await priceOf(event, app.cohortId, app.packageId);
   const qr = paymentQr(amount);
   return {
     ...app,

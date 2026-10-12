@@ -3,7 +3,8 @@ import {
   ArrowRight, Award, CalendarDays, ChevronDown, Clock, FileText, GraduationCap, Hospital,
   HeartPulse, Laptop, PawPrint, Scale, Syringe, ShieldCheck, ShieldPlus, Stethoscope, Users, AlertCircle, BookOpen, Download,
 } from "lucide-vue-next";
-import { CONTACT, COHORT, PACKAGES, baht } from "#shared/config";
+import { CONTACT, baht } from "#shared/config";
+import { cohortPackages } from "#shared/cohorts";
 
 const lineUrl = `https://line.me/R/ti/p/${encodeURIComponent(CONTACT.line)}`;
 const mailUrl = `mailto:${CONTACT.email}?subject=${encodeURIComponent("สมัครเรียนหลักสูตรผู้ช่วยสัตวแพทย์ (VPP)")}&body=${encodeURIComponent("ชื่อ-นามสกุล:\nเบอร์โทร:\nแพ็กเกจที่สนใจ (ภาคทฤษฎี / ครบ 2 ภาค):\nโรงพยาบาล/คลินิกที่สังกัด:")}`;
@@ -18,7 +19,18 @@ const latestThree = computed(() => (latest.value ?? []).slice(0, 3));
 const { data: faq } = await useAsyncData("faq", () => queryCollection("faq").order("order", "ASC").all());
 const { data: docs } = await useAsyncData("documents", () => queryCollection("documents").order("order", "ASC").all());
 
-const sessionIcons = [Laptop, FileText, Hospital];
+const sessionIcons = { theory: Laptop, exam: FileText, practical: Hospital, other: CalendarDays };
+const allCohorts = await useCohorts();
+const cohorts = computed(() => allCohorts.value.filter((c) => c.status !== "hidden"));
+const openCohort = computed(() => cohorts.value.find((c) => c.status === "open"));
+// ราคาในส่วน "ค่าอบรมหลักสูตร" ใช้รุ่นแรกที่เปิดรับ (หรือรุ่นแรกที่แสดง)
+const priceCohort = computed(() => openCohort.value ?? cohorts.value[0]);
+const packages = computed(() => cohortPackages(priceCohort.value));
+const bundle = computed(() => packages.value.find((p) => p.id === "bundle")!);
+// แสดงราคาในการ์ดรุ่นเฉพาะเมื่อรุ่นที่เปิดรับมีราคาไม่เท่ากัน
+const priceKey = (c: { priceTheory: number; pricePractical: number; priceBundle: number }) => `${c.priceTheory}/${c.pricePractical}/${c.priceBundle}`;
+const pricesDiffer = computed(() => new Set(cohorts.value.filter((c) => c.status === "open").map(priceKey)).size > 1);
+const applyLink = (id: string) => (applyTo === "/apply" ? `/apply?cohort=${encodeURIComponent(id)}` : applyTo);
 
 const PROBLEMS = [
   "พนักงานใหม่ยังทำงานไม่คล่อง",
@@ -45,8 +57,8 @@ const WHY = [
       <div class="mx-auto grid max-w-6xl items-center gap-10 px-5 py-14 md:grid-cols-2 md:py-20">
         <div>
           <div class="flex flex-wrap gap-2 text-sm font-semibold text-white">
-            <span class="rounded-full bg-ok px-3 py-1">เปิดรับสมัครแล้ว!</span>
-            <span class="rounded-full bg-brand px-3 py-1">รุ่นที่เปิดรับบัตร</span>
+            <span v-if="openCohort" class="rounded-full bg-ok px-3 py-1">เปิดรับสมัครแล้ว!</span>
+            <span v-if="openCohort" class="rounded-full bg-brand px-3 py-1">{{ openCohort.name }}</span>
           </div>
           <h1 class="mt-5 text-4xl font-bold leading-tight text-navy-800 md:text-5xl">
             หลักสูตรผู้ช่วยสัตวแพทย์
@@ -88,24 +100,32 @@ const WHY = [
       <div class="mx-auto max-w-6xl px-5">
         <h2 class="text-3xl font-bold">รุ่นที่เปิดรับสมัคร</h2>
         <p class="mt-1 text-sky-card">เลือกรุ่นที่สะดวก แล้วสมัครผ่าน LINE หรืออีเมลได้ทันที</p>
-        <div class="mt-6 rounded-3xl bg-white p-6 text-navy-900 shadow-xl">
+        <div v-for="c in cohorts" :key="c.id" class="mt-6 rounded-3xl bg-white p-6 text-navy-900 shadow-xl">
           <div class="flex flex-wrap items-center justify-between gap-3">
             <div class="flex flex-wrap items-center gap-3">
-              <span class="rounded-full bg-brand px-5 py-2 text-lg font-bold text-white">{{ COHORT.name }}</span>
-              <span class="rounded-full bg-ok/10 px-3 py-1 text-xs font-medium text-ok">● เปิดรับสมัคร · {{ COHORT.seatsLeft }} ที่นั่ง</span>
+              <span class="rounded-full px-5 py-2 text-lg font-bold text-white" :class="c.status === 'open' ? 'bg-brand' : 'bg-slate-400'">{{ c.name }}</span>
+              <span v-if="c.status === 'open'" class="rounded-full bg-ok/10 px-3 py-1 text-xs font-medium text-ok">● เปิดรับสมัคร{{ c.seats ? ` · ${c.seats} ที่นั่ง` : "" }}</span>
+              <span v-else class="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-500">● {{ c.status === "full" ? "เต็มแล้ว" : "ปิดรับสมัคร" }}</span>
             </div>
-            <NuxtLink :to="applyTo" class="rounded-full bg-navy-800 px-5 py-2 text-sm font-semibold text-white">สมัครรุ่นนี้ →</NuxtLink>
+            <NuxtLink v-if="c.status === 'open'" :to="applyLink(c.id)" class="rounded-full bg-navy-800 px-5 py-2 text-sm font-semibold text-white">สมัครรุ่นนี้ →</NuxtLink>
           </div>
-          <div class="mt-5 grid gap-4 md:grid-cols-3">
-            <div v-for="(s, i) in COHORT.sessions" :key="s.title" class="rounded-2xl bg-sky-card/60 p-4 text-sm">
+          <div v-if="c.sessions.length" class="mt-5 grid gap-4" :class="c.sessions.length >= 3 ? 'md:grid-cols-3' : c.sessions.length === 2 ? 'md:grid-cols-2' : ''">
+            <div v-for="(s, i) in c.sessions" :key="i" class="rounded-2xl bg-sky-card/60 p-4 text-sm">
               <div class="flex items-center gap-2 font-semibold">
-                <component :is="sessionIcons[i]" class="size-4" />{{ s.title }}
+                <component :is="sessionIcons[s.icon || 'other']" class="size-4" />{{ s.title }}
               </div>
-              <div class="mt-3 flex items-center gap-2"><CalendarDays class="size-4 text-brand" />{{ s.date }}</div>
-              <div class="mt-1 flex items-center gap-2"><Clock class="size-4 text-brand" />{{ s.time }}</div>
-              <div v-if="'extra' in s && s.extra" class="mt-1 flex items-center gap-2"><GraduationCap class="size-4 text-brand" />{{ s.extra }}</div>
+              <div v-if="s.date" class="mt-3 flex items-center gap-2"><CalendarDays class="size-4 shrink-0 text-brand" />{{ s.date }}</div>
+              <div v-if="s.time" class="mt-1 flex items-center gap-2"><Clock class="size-4 shrink-0 text-brand" />{{ s.time }}</div>
+              <div v-if="s.extra" class="mt-1 flex items-center gap-2"><GraduationCap class="size-4 shrink-0 text-brand" />{{ s.extra }}</div>
             </div>
           </div>
+          <p v-if="pricesDiffer && c.status === 'open'" class="mt-4 text-sm text-slate-600">
+            ค่าเรียนรุ่นนี้: ภาคทฤษฎี <b>{{ baht(c.priceTheory) }}</b> · ภาคปฏิบัติ <b>{{ baht(c.pricePractical) }}</b> · ครบ 2 ภาค <b class="text-brand">{{ baht(c.priceBundle) }}</b> บาท/คน
+          </p>
+        </div>
+        <div v-if="!cohorts.length" class="mt-6 rounded-3xl bg-white p-6 text-navy-900 shadow-xl">
+          <p class="font-semibold">ยังไม่มีรุ่นที่เปิดรับสมัคร</p>
+          <p class="mt-1 text-sm text-slate-600">สนใจเรียนรุ่นถัดไป ติดต่อทีมงานทาง LINE {{ CONTACT.line }} หรือโทร {{ CONTACT.phone }}</p>
         </div>
       </div>
     </section>
@@ -115,10 +135,10 @@ const WHY = [
       <div class="mx-auto max-w-6xl px-5">
         <h2 class="text-center text-3xl font-bold text-navy-800">ค่าอบรมหลักสูตร</h2>
         <div class="mt-8 grid gap-5 md:grid-cols-3">
-          <template v-for="p in PACKAGES" :key="p.id">
+          <template v-for="p in packages" :key="p.id">
             <div v-if="p.id === 'bundle'" class="rounded-3xl bg-gradient-to-br from-brand to-brand-dark p-6 text-white shadow-xl">
               <div class="font-semibold">★ พิเศษ! สมัครครบทั้ง 2 ภาค</div>
-              <div class="mt-1 text-xs opacity-90">จาก 17,000 บาท · ประหยัด 2,000 บาท</div>
+              <div v-if="bundle.save && bundle.save > 0" class="mt-1 text-xs opacity-90">จาก {{ baht(bundle.full!) }} บาท · ประหยัด {{ baht(bundle.save) }} บาท</div>
               <div class="mt-4 text-5xl font-bold">{{ baht(p.price) }} <span class="text-lg font-medium">บาท/คน</span></div>
               <NuxtLink :to="applyTo" class="mt-5 inline-block rounded-full bg-white px-5 py-2 text-sm font-semibold text-brand-dark">สมัครแพ็กเกจนี้</NuxtLink>
             </div>

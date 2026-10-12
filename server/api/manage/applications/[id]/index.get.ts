@@ -16,5 +16,5 @@ export default defineEventHandler(async (event) => {
   const pays = await db
     .select({ id: payments.id, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, verifiedBy: payments.verifiedBy, createdAt: payments.createdAt, paidAt: payments.paidAt, hasSlip: payments.slipType })
     .from(payments).where(eq(payments.applicationId, id)).orderBy(desc(payments.createdAt));
-  return { ...app.app, email: app.email, files, payments: pays, amount: priceOf(app.app.packageId) };
+  return { ...app.app, email: app.email, files, payments: pays, amount: await priceOf(event, app.app.cohortId, app.app.packageId) };
 });
