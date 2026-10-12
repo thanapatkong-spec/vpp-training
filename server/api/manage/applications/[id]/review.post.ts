@@ -34,6 +34,9 @@ export default defineEventHandler(async (event) => {
   const [owner] = await db.select({ email: user.email }).from(user).where(eq(user.id, app.userId)).limit(1);
   const fileRows = await db.select({ id: applicationFiles.id, kind: applicationFiles.kind }).from(applicationFiles).where(eq(applicationFiles.applicationId, id));
   const rejectedDocs = b.status === "needs_changes" ? b.files.filter((f) => f.status === "rejected").map((f) => ({ kind: fileRows.find((r) => r.id === f.id)?.kind || "", note: f.note })) : [];
-  if (owner) await mailReviewed(app, owner.email, b.status, b.adminNote, rejectedDocs, await priceOf(event, app.cohortId, app.packageId));
+  if (owner) {
+    const amount = await priceOf(event, app.cohortId, app.packageId);
+    background(mailReviewed(app, owner.email, b.status, b.adminNote, rejectedDocs, amount));
+  }
   return { ok: true };
 });

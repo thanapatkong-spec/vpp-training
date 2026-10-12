@@ -211,8 +211,19 @@ async function removeMember(m: Member) {
   }
 }
 
+// โหลดรายชื่อสมาชิกเมื่อเปิดแท็บสมาชิกครั้งแรก (ไม่โหลดทุกอย่างตั้งแต่เข้าเพจ)
+let membersLoaded = false;
+watch(tab, (t) => {
+  if (t === "members" && !membersLoaded && !forbidden.value) {
+    membersLoaded = true;
+    loadMembers();
+  }
+});
 async function load() {
-  loadMembers();
+  if (tab.value === "members") {
+    membersLoaded = true;
+    loadMembers();
+  }
   try {
     rows.value = await $fetch<Row[]>("/api/manage/claims", { headers: authHeaders() });
   } catch (e: any) {
@@ -221,10 +232,14 @@ async function load() {
   }
   loaded.value = true;
 }
+// โหลดครั้งเดียวต่อผู้ใช้ (session ถูกดึงใหม่ทุกครั้งที่สลับกลับมาที่แท็บเบราว์เซอร์ — ไม่ต้องโหลดข้อมูลซ้ำ)
+let loadedFor = "";
 watchEffect(() => {
   if (isPending.value) return;
-  if (!session.value) navigateTo("/login");
-  else load();
+  if (!session.value) return navigateTo("/login");
+  if (loadedFor === session.value.user.id) return;
+  loadedFor = session.value.user.id;
+  load();
 });
 
 const files = reactive<Record<string, File | undefined>>({});
