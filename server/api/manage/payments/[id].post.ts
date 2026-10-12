@@ -17,10 +17,10 @@ export default defineEventHandler(async (event) => {
   if (p.data.action === "approve") {
     const ref = p.data.ref || row.pay.transRef || `ADMIN-${row.pay.id.slice(0, 8).toUpperCase()}`;
     await db.update(payments).set({ status: "paid", paidAt: new Date(), verifiedBy: admin.email, note: p.data.note || row.pay.note, transRef: row.pay.transRef || p.data.ref || null }).where(eq(payments.id, row.pay.id));
-    await mailPaid(row.app, row.email, row.pay.amount, ref);
+    background(mailPaid(row.app, row.email, row.pay.amount, ref));
   } else {
     await db.update(payments).set({ status: "rejected", verifiedBy: admin.email, note: p.data.note || "ทีมงานตรวจสลิปแล้วไม่ผ่าน" }).where(eq(payments.id, row.pay.id));
-    await sendMail({ to: row.email, subject: "สลิปค่าเรียนไม่ผ่านการตรวจสอบ · VPP", html: `<p>สลิปที่ส่งมาไม่ผ่านการตรวจสอบ${p.data.note ? `: ${p.data.note.replace(/[<>&]/g, "")}` : ""}</p><p>กรุณาแนบสลิปใหม่ในหน้าใบสมัคร หรือตอบกลับอีเมลนี้</p>`, text: `สลิปที่ส่งมาไม่ผ่านการตรวจสอบ${p.data.note ? `: ${p.data.note}` : ""}\nกรุณาแนบสลิปใหม่ในหน้าใบสมัคร หรือตอบกลับอีเมลนี้` });
+    background(sendMail({ to: row.email, subject: "สลิปค่าเรียนไม่ผ่านการตรวจสอบ · VPP", html: `<p>สลิปที่ส่งมาไม่ผ่านการตรวจสอบ${p.data.note ? `: ${p.data.note.replace(/[<>&]/g, "")}` : ""}</p><p>กรุณาแนบสลิปใหม่ในหน้าใบสมัคร หรือตอบกลับอีเมลนี้</p>`, text: `สลิปที่ส่งมาไม่ผ่านการตรวจสอบ${p.data.note ? `: ${p.data.note}` : ""}\nกรุณาแนบสลิปใหม่ในหน้าใบสมัคร หรือตอบกลับอีเมลนี้` }));
   }
   return { ok: true };
 });

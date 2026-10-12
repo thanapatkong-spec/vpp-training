@@ -20,6 +20,6 @@ export default defineEventHandler(async (event) => {
   }
   const amount = await priceOf(event, row.app.cohortId, row.app.packageId);
   const [ins] = await db.insert(payments).values({ applicationId: row.app.id, amount, status: "paid", transRef: p.data.ref || null, verifiedBy: admin.email, note: p.data.note || "บันทึกรับชำระโดยแอดมิน", paidAt: new Date() }).returning({ id: payments.id });
-  await mailPaid(row.app, row.email, amount, p.data.ref || `ADMIN-${ins!.id.slice(0, 8).toUpperCase()}`);
+  background(mailPaid(row.app, row.email, amount, p.data.ref || `ADMIN-${ins!.id.slice(0, 8).toUpperCase()}`));
   return { ok: true };
 });

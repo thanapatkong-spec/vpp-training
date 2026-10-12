@@ -28,7 +28,7 @@ export default defineEventHandler(async (event) => {
     const [dup] = await db.select({ id: payments.id }).from(payments).where(eq(payments.transRef, r.transRef)).limit(1);
     if (dup) throw createError({ statusCode: 409, message: "สลิปนี้ถูกใช้ไปแล้ว" });
     await db.insert(payments).values({ ...base, status: "paid", transRef: r.transRef, verifiedBy: "slip-api", paidAt: new Date() });
-    await mailPaid(app, u.email, amount, r.transRef);
+    background(mailPaid(app, u.email, amount, r.transRef));
     return { status: "paid" };
   }
   if (r.configured && !r.ok) {
@@ -37,6 +37,6 @@ export default defineEventHandler(async (event) => {
   }
   // ยังไม่เปิดตรวจอัตโนมัติ: รอแอดมินตรวจ
   await db.insert(payments).values({ ...base, status: "pending" });
-  await mailSlipNeedsReview(app, u.email, amount);
+  background(mailSlipNeedsReview(app, u.email, amount));
   return { status: "pending" };
 });

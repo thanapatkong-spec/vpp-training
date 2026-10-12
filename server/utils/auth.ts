@@ -5,6 +5,7 @@ import type { H3Event } from "h3";
 import { account, session, user, verification } from "../db/schema";
 import { useDb } from "./db";
 import { mailerEnabled, sendMail } from "./mailer";
+import { background } from "./background";
 
 let _auth: ReturnType<typeof create> | null = null;
 
@@ -31,14 +32,14 @@ function create(db: NonNullable<ReturnType<typeof useDb>>) {
       minPasswordLength: 8,
       requireEmailVerification: verifyEmail,
       sendResetPassword: async ({ user: u, url }) => {
-        await sendMail({ to: u.email, subject: "ตั้งรหัสผ่านใหม่ · VPP", ...mailBody("กดลิงก์เพื่อตั้งรหัสผ่านใหม่", url, "ตั้งรหัสผ่านใหม่") });
+        background(sendMail({ to: u.email, subject: "ตั้งรหัสผ่านใหม่ · VPP", ...mailBody("กดลิงก์เพื่อตั้งรหัสผ่านใหม่", url, "ตั้งรหัสผ่านใหม่") }));
       },
     },
     emailVerification: {
       sendOnSignUp: mail, // มีอีเมลแล้วส่งลิงก์ยืนยันตอนสมัครเสมอ (ไม่บังคับ)
       autoSignInAfterVerification: true,
       sendVerificationEmail: async ({ user: u, url }) => {
-        await sendMail({ to: u.email, subject: "ยืนยันอีเมล · VPP", ...mailBody("ยืนยันอีเมลเพื่อเริ่มใช้งานบัญชี VPP", url, "ยืนยันอีเมล") });
+        background(sendMail({ to: u.email, subject: "ยืนยันอีเมล · VPP", ...mailBody("ยืนยันอีเมลเพื่อเริ่มใช้งานบัญชี VPP", url, "ยืนยันอีเมล") }));
       },
     },
     // สมาชิกที่แอดมินนำเข้าไว้ล่วงหน้า (ยังไม่มีรหัสผ่าน) เข้าด้วย Google อีเมลเดียวกันได้ทันที

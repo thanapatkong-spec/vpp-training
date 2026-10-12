@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
       if (replace.length) await tx.delete(applicationFiles).where(and(eq(applicationFiles.applicationId, cur.id), inArray(applicationFiles.kind, replace)));
       for (const d of docs) await tx.insert(applicationFiles).values({ applicationId: cur.id, kind: d.kind, name: d.name, contentType: d.contentType, size: d.data.length, data: d.data });
     });
-    await mailSubmitted(values, u.email, true);
+    background(mailSubmitted(values, u.email, true));
     return { ok: true, id: cur.id };
   }
 
@@ -44,6 +44,6 @@ export default defineEventHandler(async (event) => {
     for (const d of docs) await tx.insert(applicationFiles).values({ applicationId: row!.id, kind: d.kind, name: d.name, contentType: d.contentType, size: d.data.length, data: d.data });
     return row!.id;
   });
-  await mailSubmitted(values, u.email);
+  background(mailSubmitted(values, u.email));
   return { ok: true, id };
 });
