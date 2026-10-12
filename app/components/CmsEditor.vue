@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CMS_COLLECTIONS, type CmsCollection } from "#shared/cms";
+import { CMS_COLLECTIONS, SLUG_RE, type CmsCollection } from "#shared/cms";
 
 const props = defineProps<{ authHeaders: () => Record<string, string> | undefined }>();
 
@@ -12,6 +12,9 @@ const loading = ref(false);
 const editing = ref<null | { slug: string; isNew: boolean; sha?: string }>(null);
 const values = ref<Record<string, any>>({});
 const newSlug = ref("");
+// ชื่อไฟล์/รหัสใช้ได้เฉพาะ a-z 0-9 และ - : แปลงให้อัตโนมัติ เช่น "003/2569" → "003-2569", "Course 2570" → "course-2570"
+const toSlug = (v: string) => v.trim().toLowerCase().replace(/[\s/\\_.]+/g, "-").replace(/[^a-z0-9-]/g, "").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
+const slugPreview = computed(() => toSlug(newSlug.value));
 const saving = ref(false);
 const msg = ref<{ ok: boolean; text: string } | null>(null);
 
@@ -66,15 +69,20 @@ const stamp = () => new Date().toISOString().replace(/[-:T]/g, "").slice(0, 14).
 async function save() {
   if (!editing.value) return;
   const e = editing.value;
-  const slug = e.isNew ? newSlug.value.trim() || (col.value.slugHint ? "" : stamp()) : e.slug;
+  const slug = e.isNew ? toSlug(newSlug.value) || (col.value.slugHint ? "" : stamp()) : e.slug;
   if (!slug) {
-    msg.value = { ok: false, text: "กรุณากรอกรหัส" };
+    msg.value = { ok: false, text: newSlug.value.trim() ? "รหัสต้องมีตัวอักษร a-z หรือตัวเลขอย่างน้อย 1 ตัว (ภาษาไทยใช้ไม่ได้)" : "กรุณากรอกรหัส" };
     return;
   }
+  if (!SLUG_RE.test(slug)) {
+    msg.value = { ok: false, text: "รหัสใช้ได้เฉพาะ a-z 0-9 และ - (ไม่เกิน 80 ตัว)" };
+    return;
+  }
+  if (e.isNew) newSlug.value = slug;
   saving.value = true;
   msg.value = null;
   try {
-    await $fetch(`/api/manage/cms/${col.value.name}/${slug}`, { method: "PUT", body: { values: values.value, sha: e.sha }, headers: props.authHeaders() });
+    await $fetch(`/api/manage/cms/${col.value.name}/${encodeURIComponent(slug)}`, { method: "PUT", body: { values: values.value, sha: e.sha }, headers: props.authHeaders() });
     msg.value = { ok: true, text: "บันทึกแล้ว เว็บจะอัปเดตภายใน 1–3 นาที" };
     await loadList();
     await open(slug);
@@ -131,12 +139,13 @@ onMounted(loadList);
       <h2 class="mt-2 text-xl font-bold text-navy-800">{{ editing.isNew ? `เพิ่ม${col.singular || col.label}` : "แก้ไข" }}</h2>
       <div v-if="editing.isNew && col.name === 'articles'" class="mt-4">
         <label class="block text-sm font-semibold text-navy-800">ชื่อลิงก์ของบทความ (ไม่บังคับ)</label>
-        <input v-model="newSlug" class="field mt-1 max-w-sm" placeholder="เช่น course-2570 (a-z 0-9 และ -)" />
+        <input v-model="newSlug" class="field mt-1 max-w-sm" placeholder="เช่น course-2570 (a-z 0-9 และ -)" @blur="newSlug = toSlug(newSlug) || newSlug" />
         <p class="mt-1 text-xs text-slate-500">ใช้เป็นที่อยู่หน้า /articles/… เว้นว่าง = ตั้งให้อัตโนมัติ</p>
       </div>
       <div v-else-if="editing.isNew && col.slugHint" class="mt-4">
         <label class="block text-sm font-semibold text-navy-800">รหัส<span class="text-red-600"> *</span></label>
-        <input v-model="newSlug" class="field mt-1 max-w-sm" placeholder="a-z 0-9 และ - เท่านั้น" />
+        <input v-model="newSlug" class="field mt-1 max-w-sm" placeholder="a-z 0-9 และ - เท่านั้น" @blur="newSlug = toSlug(newSlug) || newSlug" />
+        <p v-if="newSlug.trim() && slugPreview !== newSlug.trim()" class="mt-1 text-xs text-amber-700">จะบันทึกเป็น: <b>{{ slugPreview || "(ไม่มีตัวอักษรที่ใช้ได้)" }}</b></p>
         <p class="mt-1 text-xs text-slate-500">{{ col.slugHint }}</p>
       </div>
       <div class="mt-4 space-y-5">
