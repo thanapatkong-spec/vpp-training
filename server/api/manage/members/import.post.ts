@@ -5,6 +5,7 @@ import { memberProfiles, user } from "../../../db/schema";
 
 const Body = z.object({
   dryRun: z.boolean().default(true),
+  invite: z.boolean().default(false), // ส่งอีเมลลิงก์เปิดใช้งานให้คนที่สร้างใหม่และมีอีเมลทันที
   rows: z
     .array(z.object({ name: z.string().trim().max(200), email: z.string().trim().max(320), phone: z.string().trim().max(40).optional(), cohort: z.string().trim().max(60).optional() }))
     .max(2000),
@@ -15,7 +16,7 @@ export default defineEventHandler(async (event) => {
   await requireAdmin(event);
   const parsed = Body.safeParse(await readBody(event));
   if (!parsed.success) throw createError({ statusCode: 422, message: "ข้อมูลไม่ถูกต้อง" });
-  const { rows, dryRun } = parsed.data;
+  const { rows, dryRun, invite } = parsed.data;
   const db = useDb()!;
 
   const skipped: { name: string; reason: string }[] = [];
@@ -51,14 +52,25 @@ export default defineEventHandler(async (event) => {
     return true;
   });
 
+  const created: { id: string; name: string; email: string }[] = [];
   if (!dryRun && toCreate.length) {
     await db.transaction(async (tx) => {
       for (const c of toCreate) {
         const id = randomUUID().replace(/-/g, "");
+        created.push({ id, name: c.name, email: c.email });
         await tx.insert(user).values({ id, name: c.name, email: c.email, emailVerified: false });
         await tx.insert(memberProfiles).values({ userId: id, phone: c.phone, cohort: c.cohort });
       }
     });
   }
-  return { dryRun, create: toCreate.length, noEmail, skipped };
+  let invited = 0;
+  if (invite && created.length && mailerEnabled()) {
+    const withEmail = created.filter((c) => !isPlaceholderEmail(c.email) && !isAdminCandidate(c.email));
+    const res = await inBatches(withEmail, 3, async (c) => {
+      const l = await createActivationLink(event, db, c.id);
+      return mailActivation(c.name, c.email, l.url, l.expiresAt);
+    });
+    invited = res.filter(Boolean).length;
+  }
+  return { dryRun, create: toCreate.length, noEmail, skipped, invited };
 });
