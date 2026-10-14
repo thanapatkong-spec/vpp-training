@@ -75,7 +75,7 @@ function newRow() {
     <div v-else-if="field.type === 'markdown'">
       <div class="mt-1 flex flex-wrap items-center gap-2 text-xs text-slate-500">
         <label class="cursor-pointer rounded-full border border-navy-800 px-3 py-1 text-navy-800 hover:bg-navy-800 hover:text-white">
-          แทรกรูป/ไฟล์<input type="file" multiple class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.pdf,.docx,.xlsx,.pptx,.zip" @change="pick($event, insertMd)" />
+          แทรกรูป/ไฟล์<input type="file" multiple class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif,.pdf,.docx,.xlsx,.pptx,.zip" @change="pick($event, insertMd)" />
         </label>
         <span>เขียนแบบ Markdown: <code>## หัวข้อ</code> · <code>**ตัวหนา**</code> · <code>- รายการ</code> · <code>[ข้อความ](ลิงก์)</code></span>
       </div>
@@ -88,7 +88,7 @@ function newRow() {
         <img v-if="modelValue && isImg(modelValue)" :src="src(modelValue)" alt="" class="h-16 w-16 rounded-lg object-cover" />
         <input :value="modelValue ?? ''" class="field max-w-md flex-1" placeholder="/uploads/ชื่อไฟล์ (หรืออัปโหลด)" @input="set(($event.target as HTMLInputElement).value)" />
         <label class="cursor-pointer rounded-full border border-navy-800 px-3 py-1.5 text-xs text-navy-800 hover:bg-navy-800 hover:text-white">
-          {{ busy ? "กำลังอัปโหลด..." : "อัปโหลด" }}<input type="file" class="hidden" :accept="field.type === 'image' ? '.jpg,.jpeg,.png,.webp,.gif' : '.pdf,.docx,.xlsx,.pptx,.zip'" @change="pick($event, (p) => set(p[0]))" />
+          {{ busy ? "กำลังอัปโหลด..." : "อัปโหลด" }}<input type="file" class="hidden" :accept="field.type === 'image' ? '.jpg,.jpeg,.png,.webp,.gif,.heic,.heif' : '.pdf,.docx,.xlsx,.pptx,.zip'" @change="pick($event, (p) => set(p[0]))" />
         </label>
         <button v-if="modelValue" type="button" class="text-xs text-red-600 hover:underline" @click="set('')">ล้าง</button>
       </div>
@@ -106,7 +106,7 @@ function newRow() {
         </li>
       </ul>
       <label class="mt-2 inline-block cursor-pointer rounded-full border border-navy-800 px-4 py-1.5 text-xs text-navy-800 hover:bg-navy-800 hover:text-white">
-        {{ busy ? "กำลังอัปโหลด..." : "+ เพิ่มรูป (เลือกได้หลายรูป)" }}<input type="file" multiple class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif" @change="pick($event, (p) => set([...(modelValue || []), ...p]))" />
+        {{ busy ? "กำลังอัปโหลด..." : "+ เพิ่มรูป (เลือกได้หลายรูป)" }}<input type="file" multiple class="hidden" accept=".jpg,.jpeg,.png,.webp,.gif,.heic,.heif" @change="pick($event, (p) => set([...(modelValue || []), ...p]))" />
       </label>
     </div>
 
