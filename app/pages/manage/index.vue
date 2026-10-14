@@ -398,7 +398,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
         <p v-if="r.adminNote" class="mt-1 text-sm text-slate-600">หมายเหตุแอดมิน: {{ r.adminNote }}</p>
 
         <div v-if="r.status === 'pending'" class="mt-4 grid gap-3 border-t border-sky-card pt-4 md:grid-cols-2">
-          <div class="text-xs text-slate-600 md:col-span-2">ไฟล์ใบประกาศ (PDF / JPG / PNG ไม่เกิน 4MB) *
+          <div class="text-xs text-slate-600 md:col-span-2">ไฟล์ใบประกาศ (PDF ไม่เกิน 4MB · รูป JPG/PNG ขนาดไหนก็ได้ ระบบย่อให้) *
             <FilePickButton v-model="files[r.id]" class="mt-1" />
           </div>
           <input v-model="certNo[r.id]" class="field" placeholder="เลขที่ใบประกาศ (ถ้ามี)" />
@@ -526,7 +526,7 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
                     </ul>
                     <p v-else class="mt-1 text-xs text-slate-500">ยังไม่มีไฟล์</p>
                     <div class="mt-3 grid gap-2 md:grid-cols-2">
-                      <div class="text-xs text-slate-600">แนบไฟล์ใหม่ (PDF / JPG / PNG ไม่เกิน 4MB) · ไม่บังคับ
+                      <div class="text-xs text-slate-600">แนบไฟล์ใหม่ (PDF ไม่เกิน 4MB · รูปขนาดไหนก็ได้ ระบบย่อให้) · ไม่บังคับ
                         <FilePickButton v-model="cf.file" class="mt-1" @picked="onPickAttach" />
                       </div>
                       <label class="text-xs text-slate-600">ชื่อไฟล์ที่แสดง (ต้องใส่เมื่อแนบไฟล์)

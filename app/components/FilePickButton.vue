@@ -10,12 +10,21 @@ const props = withDefaults(defineProps<{ modelValue?: File; accept?: string; lab
 const emit = defineEmits<{ "update:modelValue": [f: File | undefined]; picked: [f: File] }>();
 const err = ref("");
 
-function onChange(e: Event) {
+const shrinking = ref(false);
+const isPhoto = (f: File) => /^image\/(jpeg|png|webp|heic|heif)$/i.test(f.type) || /\.(jpe?g|png|webp|heic|heif)$/i.test(f.name);
+
+async function onChange(e: Event) {
   const input = e.target as HTMLInputElement;
-  const f = input.files?.[0];
+  let f = input.files?.[0];
   input.value = ""; // เลือกไฟล์เดิมซ้ำได้
   if (!f) return;
-  if (f.size > props.maxMb * 1024 * 1024) {
+  const limit = props.maxMb * 1024 * 1024;
+  // รูปใหญ่เกิน: ย่อให้อัตโนมัติ (ไม่ต้องย่อเอง)
+  if (f.size > limit && isPhoto(f)) {
+    shrinking.value = true;
+    try { f = await shrinkImage(f, Math.min(limit * 0.9, 1.5 * 1024 * 1024)); } catch {} finally { shrinking.value = false; }
+  }
+  if (f.size > limit) {
     err.value = `ไฟล์ใหญ่เกิน ${props.maxMb}MB (ไฟล์นี้ ${(f.size / 1024 / 1024).toFixed(1)}MB) กรุณาย่อขนาดก่อน`;
     return;
   }
@@ -32,7 +41,8 @@ function onChange(e: Event) {
         <Paperclip class="size-4" />{{ modelValue ? "เปลี่ยนไฟล์" : label }}
         <input type="file" :accept="accept" class="sr-only" @change="onChange" />
       </label>
-      <span class="text-sm" :class="modelValue ? 'font-medium text-navy-800' : 'text-slate-500'">{{ modelValue ? `${modelValue.name} (${Math.max(1, Math.round(modelValue.size / 1024))} KB)` : "ยังไม่ได้เลือกไฟล์" }}</span>
+      <span v-if="shrinking" class="text-sm text-slate-500">กำลังย่อรูป...</span>
+      <span v-else class="text-sm" :class="modelValue ? 'font-medium text-navy-800' : 'text-slate-500'">{{ modelValue ? `${modelValue.name} (${Math.max(1, Math.round(modelValue.size / 1024))} KB)` : "ยังไม่ได้เลือกไฟล์" }}</span>
       <button v-if="modelValue" type="button" class="text-xs text-red-600 hover:underline" @click="emit('update:modelValue', undefined)">เอาออก</button>
     </div>
     <p v-if="err" class="mt-1 text-xs text-red-700">{{ err }}</p>
