@@ -3,7 +3,7 @@
 เว็บหลักสูตรผู้ช่วยสัตวแพทย์ด้านการพยาบาลสัตว์ (VPP) ความร่วมมือ Dr.John Pet × รพส.คชาเวท
 - เว็บจริง: https://vpp-training.vercel.app (Vercel ทีม Drjohn, region sin1) · ฐานข้อมูล Neon Postgres (Singapore)
 - GitHub Pages (thanapatkong-spec.github.io/vpp-training) เลิกใช้แล้ว เหลือหน้าส่งต่อไป Vercel
-- โดเมน vetvpp.com (Google Workspace / DNS ที่ Squarespace) ยังไม่ได้ชี้มาที่ Vercel
+- โดเมน www.vetvpp.com ชี้มาที่ Vercel แล้ว (DNS ที่ Squarespace) · โดเมนที่ล็อกอินได้ตั้งใน `trustedOrigins` (server/utils/auth.ts) + env `TRUSTED_ORIGINS`
 
 ## สแต็ก
 Nuxt 4 + Vue 3 + Tailwind v4 · Nitro (server/api) · Drizzle ORM + postgres-js · Better Auth (อีเมล/รหัสผ่าน, Google) · Zod
@@ -36,7 +36,6 @@ Deploy: Vercel รัน `scripts/vercel-build.mjs` (สร้างตารา
 - ไม่พูดถึงราคาในบทความ/หน้าเนื้อหา (ราคาอยู่ที่ข้อมูลรุ่น หน้าแรก ฟอร์มสมัคร และ FAQ ข้อ 02 เท่านั้น)
 
 ## งานค้าง / ไอเดียถัดไป
-- ชี้ vetvpp.com มาที่ Vercel (A @ / CNAME www ใน Squarespace, ห้ามแตะ MX) แล้วแก้ `BETTER_AUTH_URL`
 - เชื่อม Vercel Blob สำหรับรูปที่อัปโหลด (ตอนนี้เก็บในฐานข้อมูลตาราง `media`)
 - ระบบแต้ม E-learning ต่อใบอนุญาต VPP, ใบเสร็จ PDF, นับที่นั่งอัตโนมัติ, ออกใบประกาศเป็นชุด (รอรายละเอียดจากเจ้าของ)
 - บัญชี info@vetvpp.com: ถอด iPhone 15 ที่ขายไปออกจากบัญชี, ตั้ง 2-Step ใหม่ (ถ้าเปลี่ยนรหัสผ่าน ต้องสร้าง app password ใหม่ แล้วแก้ `SMTP_PASS`)
