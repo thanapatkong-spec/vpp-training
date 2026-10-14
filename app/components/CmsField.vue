@@ -25,7 +25,8 @@ async function pick(e: Event, apply: (paths: string[]) => void) {
     for (const f of files) out.push(await upload(f));
     apply(out);
   } catch (ex: any) {
-    err.value = ex?.data?.message || "อัปโหลดไม่สำเร็จ";
+    const name = files[out.length]?.name;
+    err.value = ex?.data?.message || (ex?.status === 413 ? `ไฟล์ ${name} ใหญ่เกินที่ระบบรับได้` : `อัปโหลด ${name || ""} ไม่สำเร็จ ลองใหม่อีกครั้ง`);
     if (out.length) apply(out);
   } finally {
     busy.value = false;
