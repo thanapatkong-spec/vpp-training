@@ -25,6 +25,11 @@ function create(db: NonNullable<ReturnType<typeof useDb>>) {
     database: drizzleAdapter(db, { provider: "pg", schema: { user, session, account, verification } }),
     secret: process.env.BETTER_AUTH_SECRET,
     baseURL: process.env.BETTER_AUTH_URL,
+    // โดเมนที่ล็อกอินได้ (ไม่อยู่ในรายการ = ระบบปฏิเสธ "Invalid origin") · เพิ่มเองได้ที่ TRUSTED_ORIGINS (คั่นด้วย ,)
+    trustedOrigins: [
+      "https://vetvpp.com", "https://www.vetvpp.com", "https://vpp-training.vercel.app",
+      ...(process.env.TRUSTED_ORIGINS || "").split(",").map((s) => s.trim()).filter(Boolean),
+    ],
     // เก็บข้อมูล session (ลงลายเซ็น) ในคุกกี้ 5 นาที — ไม่ต้องถามฐานข้อมูลทุกครั้งที่เรียก API
     session: { cookieCache: { enabled: true, maxAge: 5 * 60 } },
     emailAndPassword: {

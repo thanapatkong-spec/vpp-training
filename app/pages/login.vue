@@ -28,7 +28,11 @@ async function submit() {
   const { error: err } = await auth.signIn.email({ email: email.value.trim(), password: password.value });
   if (err) {
     pending.value = false;
-    error.value = err.status === 403 ? "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ (ตรวจลิงก์ในอีเมลที่เราส่งให้)" : "อีเมลหรือรหัสผ่านไม่ถูกต้อง";
+    error.value =
+      err.code === "EMAIL_NOT_VERIFIED" ? "กรุณายืนยันอีเมลก่อนเข้าสู่ระบบ (ตรวจลิงก์ในอีเมลที่เราส่งให้)"
+      : err.status === 401 ? "อีเมลหรือรหัสผ่านไม่ถูกต้อง"
+      : err.code === "INVALID_ORIGIN" ? "ระบบยังไม่รองรับการเข้าสู่ระบบจากที่อยู่เว็บนี้ กรุณาแจ้งทีมงาน"
+      : "เข้าสู่ระบบไม่สำเร็จ ลองใหม่อีกครั้ง";
     return;
   }
   leave(); // ปุ่มยังแสดง "กำลังเข้าสู่ระบบ..." จนกว่าจะเปลี่ยนหน้า
