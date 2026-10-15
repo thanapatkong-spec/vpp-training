@@ -27,13 +27,13 @@ export async function mailSubmitted(a: App, to: string, resubmit = false) {
 
 export async function mailReviewed(a: App, to: string, status: string, note: string | null | undefined, rejectedDocs: { kind: string; note?: string | null }[], amount = 0) {
   if (status === "approved") {
-    const m = layout("ใบสมัครของคุณผ่านการตรวจสอบแล้ว", [
+    const m = layout("เอกสารใบสมัครผ่านการตรวจสอบแล้ว", [
       `เรียน ${esc(fullName(a))}`,
-      `ขั้นต่อไป: ชำระค่าเรียน <b>${amount.toLocaleString("th-TH")} บาท</b> ผ่าน QR พร้อมเพย์ในหน้าใบสมัคร แล้วแนบสลิป`,
+      "ขั้นต่อไป: ทีมงานส่งตรวจคุณสมบัติกับสัตวแพทยสภา เมื่อได้รับผลจะแจ้งทางอีเมล และเปิดให้ชำระค่าเรียนในหน้าใบสมัคร",
       "หากยังไม่ได้ชำระค่าตรวจสอบคุณสมบัติให้สัตวแพทยสภา ชำระแล้วแนบหลักฐานในหน้าใบสมัครด้วย",
       note ? `หมายเหตุจากทีมงาน: ${esc(note)}` : "",
-    ].filter(Boolean), { url: `${site()}/apply`, label: "ชำระค่าเรียน" });
-    return sendMail({ to, subject: "ใบสมัครผ่านการตรวจสอบ กรุณาชำระค่าเรียน · VPP", ...m });
+    ].filter(Boolean), { url: `${site()}/apply`, label: "ดูสถานะใบสมัคร" });
+    return sendMail({ to, subject: "เอกสารใบสมัครผ่านการตรวจสอบ · VPP", ...m });
   }
   if (status === "needs_changes") {
     const docs = rejectedDocs.map((d) => `• ${esc(APP_DOCS.find((x) => x.kind === d.kind)?.label || d.kind)}${d.note ? `: ${esc(d.note)}` : ""}`);
@@ -79,4 +79,21 @@ export async function mailCouncilReviewed(a: App, to: string, ok: boolean, amoun
     ? layout("ยืนยันการชำระค่าตรวจสอบคุณสมบัติ", [`เรียน ${esc(fullName(a))}`, `ทีมงานตรวจหลักฐานการชำระค่าตรวจสอบคุณสมบัติให้สัตวแพทยสภา ${amount.toLocaleString("th-TH")} บาท เรียบร้อยแล้ว`, note ? `หมายเหตุ: ${esc(note)}` : ""].filter(Boolean), { url: `${site()}/apply`, label: "ดูสถานะ" })
     : layout("หลักฐานค่าตรวจสอบคุณสมบัติไม่ผ่าน", [`เรียน ${esc(fullName(a))}`, `หลักฐานการชำระค่าตรวจสอบคุณสมบัติที่ส่งมาไม่ผ่านการตรวจสอบ${note ? `: ${esc(note)}` : ""}`, "กรุณาแนบหลักฐานใหม่ในหน้าใบสมัคร หรือตอบกลับอีเมลนี้"], { url: `${site()}/apply`, label: "แนบหลักฐานใหม่" });
   await sendMail({ to, subject: ok ? "ยืนยันการชำระค่าตรวจสอบคุณสมบัติ · VPP" : "หลักฐานค่าตรวจสอบคุณสมบัติไม่ผ่าน · VPP", ...m });
+}
+
+export async function mailCouncilChecked(a: App, to: string, passed: boolean, amount: number, note?: string | null) {
+  const m = passed
+    ? layout("ผ่านการตรวจคุณสมบัติจากสัตวแพทยสภาแล้ว", [
+        `เรียน ${esc(fullName(a))}`,
+        `กรุณายืนยันสิทธิ์โดยชำระค่าเรียน <b>${amount.toLocaleString("th-TH")} บาท</b> (รวม VAT) ผ่าน QR ในหน้าใบสมัคร แล้วแนบสลิป <b>ภายใน 7 วัน</b>`,
+        "หากมีผู้สมัครเกินจำนวน หลักสูตรจะคัดเลือกผู้เรียนจากวันที่ชำระเงินก่อน",
+        note ? `หมายเหตุจากทีมงาน: ${esc(note)}` : "",
+      ].filter(Boolean), { url: `${site()}/apply`, label: "ชำระค่าเรียน" })
+    : layout("ผลการตรวจคุณสมบัติจากสัตวแพทยสภา", [
+        `เรียน ${esc(fullName(a))}`,
+        "ขออภัย สัตวแพทยสภาแจ้งว่าคุณสมบัติยังไม่ผ่านเกณฑ์การเข้าอบรม",
+        note ? `รายละเอียด: ${esc(note)}` : "",
+        "หากมีข้อสงสัย ตอบกลับอีเมลนี้ได้",
+      ].filter(Boolean));
+  await sendMail({ to, subject: passed ? "ผ่านการตรวจคุณสมบัติ กรุณาชำระค่าเรียนภายใน 7 วัน · VPP" : "ผลการตรวจคุณสมบัติจากสัตวแพทยสภา · VPP", ...m });
 }

@@ -15,6 +15,13 @@ export const APP_STATUS: Record<string, [string, string]> = {
   rejected: ["ไม่ผ่าน", "bg-red-100 text-red-700"],
 };
 
+// ผลตรวจคุณสมบัติจากสัตวแพทยสภา (หลังเอกสารผ่าน) — passed = เปิดให้ชำระค่าเรียน
+export const COUNCIL_CHECK: Record<string, [string, string]> = {
+  pending: ["รอผลตรวจคุณสมบัติ (สัตวแพทยสภา)", "bg-sky-card text-navy-800"],
+  passed: ["ผ่านการตรวจคุณสมบัติ (สัตวแพทยสภา)", "bg-green-100 text-green-800"],
+  failed: ["ไม่ผ่านการตรวจคุณสมบัติ", "bg-red-100 text-red-700"],
+};
+
 // ตรวจเลขบัตรประชาชน 13 หลัก (เลขตรวจสอบหลักสุดท้าย)
 export function validThaiId(id: string) {
   if (!/^\d{13}$/.test(id)) return false;

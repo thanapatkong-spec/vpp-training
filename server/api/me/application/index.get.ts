@@ -9,7 +9,7 @@ export default defineEventHandler(async (event) => {
   const cohort = String(getQuery(event).cohort || "");
   const [app] = await db.select().from(applications).where(and(eq(applications.userId, u.id), cohort ? eq(applications.cohortId, cohort) : undefined)).orderBy(desc(applications.createdAt)).limit(1);
   if (!app) return null;
-  const [files, allPays, amount, site, fee] = await Promise.all([
+  const [files, allPays, due, site, fee] = await Promise.all([
     db.select({ id: applicationFiles.id, kind: applicationFiles.kind, name: applicationFiles.name, status: applicationFiles.status, note: applicationFiles.note })
       .from(applicationFiles)
       .where(eq(applicationFiles.applicationId, app.id)),
@@ -17,19 +17,26 @@ export default defineEventHandler(async (event) => {
       .from(payments)
       .where(eq(payments.applicationId, app.id))
       .orderBy(desc(payments.createdAt)),
-    priceOf(event, app.cohortId, app.packageId),
+    tuitionDue(event, app.cohortId, app.packageId),
     getSiteSettings(),
     councilFee(),
   ]);
   const pays = allPays.filter((p) => p.kind !== "council");
   const cPays = allPays.filter((p) => p.kind === "council");
-  const qr = app.status === "approved" ? await paymentQr(amount) : null;
+  const amount = due.total; // ยอดโอนรวม VAT
+  // เปิดให้ชำระค่าเรียนหลังผ่านการตรวจคุณสมบัติจากสัตวแพทยสภา
+  const canPay = app.status === "approved" && app.councilCheck === "passed";
+  const qr = canPay ? await paymentQr(amount) : null;
   return {
     ...app,
     nationalId: undefined,
     files,
     payment: {
       amount,
+      base: due.base,
+      vat: due.vat,
+      vatRate: due.rate,
+      open: canPay,
       paid: pays.some((p) => p.status === "paid"),
       pending: pays.some((p) => p.status === "pending"),
       history: pays,

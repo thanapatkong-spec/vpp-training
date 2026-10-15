@@ -106,7 +106,7 @@ const WHY = computed(() => site.value.why.map((w, i) => ({ icon: WHY_ICONS[i % W
             </div>
           </div>
           <p v-if="pricesDiffer && c.status === 'open'" class="mt-4 text-sm text-slate-600">
-            ค่าเรียนรุ่นนี้: ภาคทฤษฎี <b>{{ baht(c.priceTheory) }}</b> · ภาคปฏิบัติ <b>{{ baht(c.pricePractical) }}</b> · ครบ 2 ภาค <b class="text-brand">{{ baht(c.priceBundle) }}</b> บาท/คน
+            ค่าเรียนรุ่นนี้: ภาคทฤษฎี <b>{{ baht(c.priceTheory) }}</b> · ภาคปฏิบัติ <b>{{ baht(c.pricePractical) }}</b> · ครบ 2 ภาค <b class="text-brand">{{ baht(c.priceBundle) }}</b> บาท/คน<template v-if="Number(site.vatRate) > 0"> (ยังไม่รวม VAT)</template>
           </p>
         </div>
         <div v-if="!cohorts.length" class="mt-6 rounded-3xl bg-white p-6 text-navy-900 shadow-xl">
@@ -137,6 +137,7 @@ const WHY = computed(() => site.value.why.map((w, i) => ({ icon: WHY_ICONS[i % W
             </div>
           </template>
         </div>
+        <p v-if="Number(site.vatRate) > 0" class="mt-4 text-center text-xs text-slate-500">ราคายังไม่รวม VAT {{ site.vatRate }}% · ออกใบเสร็จรับเงินและใบกำกับภาษีได้</p>
       </div>
     </section>
 
@@ -181,6 +182,10 @@ const WHY = computed(() => site.value.why.map((w, i) => ({ icon: WHY_ICONS[i % W
             <div class="font-bold text-navy-800">{{ site.legalTitle }}</div>
             <p class="mt-1 text-sm text-slate-600">{{ site.legalText }}</p>
           </div>
+        </div>
+        <div class="md:col-span-2">
+          <RegInfoBox compact />
+          <p class="mt-2 text-xs text-slate-500">ขั้นตอนและเอกสารการขอขึ้นทะเบียน: <NuxtLink to="/articles/vpp-registration" class="underline">อ่านบทความ</NuxtLink></p>
         </div>
       </div>
     </section>

@@ -1,7 +1,7 @@
 import type { H3Event } from "h3";
 import { asc, eq, isNull, sql } from "drizzle-orm";
 import YAML from "yaml";
-import { cohortPrice, sortCohorts, toCohort, type Cohort } from "#shared/cohorts";
+import { cohortPrice, sortCohorts, toCohort, withVat, type Cohort } from "#shared/cohorts";
 import { cohorts } from "../db/schema";
 
 // รุ่นที่เปิดรับสมัคร — เก็บในฐานข้อมูล (แก้ในหน้าแอดมินแล้วมีผลทันที ไม่ต้องรอ build)
@@ -67,4 +67,16 @@ export async function priceOf(event: H3Event, cohortId: string, packageId: strin
   await seedOnce(db);
   const [r] = await db.select().from(cohorts).where(eq(cohorts.id, cohortId)).limit(1); // รวมรุ่นที่ลบแล้ว (ใบสมัครเก่ายังใช้ราคาเดิม)
   return cohortPrice(r ? fromRow(r) : undefined, packageId);
+}
+
+/** อัตรา VAT (%) จากตั้งค่าเว็บไซต์ (ค่าเริ่มต้น 7) */
+export async function vatRate() {
+  const n = Number.parseFloat((await getSiteSettings()).vatRate);
+  return Number.isFinite(n) && n >= 0 ? n : 7;
+}
+
+/** ยอดที่ต้องโอนค่าเรียน = ราคารุ่น/แพ็กเกจ + VAT → { base, vat, rate, total } */
+export async function tuitionDue(event: H3Event, cohortId: string, packageId: string) {
+  const [base, rate] = await Promise.all([priceOf(event, cohortId, packageId), vatRate()]);
+  return withVat(base, rate);
 }

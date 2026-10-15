@@ -57,6 +57,12 @@ export function cohortPrice(c: Pick<Cohort, "priceTheory" | "pricePractical" | "
   return packageId === "theory" ? c.priceTheory : packageId === "practical" ? c.pricePractical : packageId === "bundle" ? c.priceBundle : 0;
 }
 
+/** ยอดโอนค่าเรียนรวม VAT (ราคาในข้อมูลรุ่น = ก่อน VAT) · rate = % เช่น 7 */
+export function withVat(base: number, rate: number) {
+  const total = Math.round((base * (100 + rate)) / 100);
+  return { base, rate, vat: total - base, total };
+}
+
 type PkgNames = Partial<Pick<SiteSettings, "pkgTheoryName" | "pkgTheorySub" | "pkgPracticalName" | "pkgPracticalSub" | "pkgBundleName">>;
 
 /** แพ็กเกจพร้อมราคาของรุ่น (ส่วนลดแพ็กเกจครบ 2 ภาค คำนวณจากราคาแยก) · names = ชื่อจากตั้งค่าเว็บไซต์ */

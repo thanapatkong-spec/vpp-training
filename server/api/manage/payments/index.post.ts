@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
     const [used] = await db.select({ id: payments.id }).from(payments).where(eq(payments.transRef, p.data.ref)).limit(1);
     if (used) throw createError({ statusCode: 409, message: "เลขอ้างอิงนี้ถูกใช้ไปแล้ว" });
   }
-  const amount = kind === "council" ? await councilFee() : await priceOf(event, row.app.cohortId, row.app.packageId);
+  const amount = kind === "council" ? await councilFee() : (await tuitionDue(event, row.app.cohortId, row.app.packageId)).total;
   const [ins] = await db.insert(payments).values({ applicationId: row.app.id, kind, amount, status: "paid", transRef: p.data.ref || null, verifiedBy: admin.email, note: p.data.note || "บันทึกรับชำระโดยแอดมิน", paidAt: new Date() }).returning({ id: payments.id });
   if (kind === "council") background(mailCouncilReviewed(row.app, row.email, true, amount, p.data.note));
   else background(mailPaid(row.app, row.email, amount, p.data.ref || `ADMIN-${ins!.id.slice(0, 8).toUpperCase()}`));

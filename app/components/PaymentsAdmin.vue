@@ -121,7 +121,7 @@ function exportCsv() {
     <div class="mt-3 grid gap-3 sm:grid-cols-3">
       <div class="rounded-2xl bg-amber-50 px-4 py-3"><p class="text-xs text-amber-800">สลิปรอตรวจ</p><p class="text-2xl font-bold text-amber-700">{{ count("pending") }}</p></div>
       <div class="rounded-2xl bg-green-50 px-4 py-3"><p class="text-xs text-green-800">ชำระแล้ว (รวม)</p><p class="text-2xl font-bold text-green-700">{{ baht(paidTotal) }} <span class="text-sm font-medium">บาท</span></p></div>
-      <div class="rounded-2xl bg-slate-50 px-4 py-3"><p class="text-xs text-slate-600">{{ kind === "council" ? "ส่งใบสมัครแล้ว ยังไม่ส่งหลักฐาน" : "ผ่านการตรวจสอบ ยังไม่ชำระ" }}</p><p class="text-2xl font-bold text-slate-700">{{ count("unpaid") }} <span class="text-sm font-medium">คน · {{ baht(unpaidTotal) }} บาท</span></p></div>
+      <div class="rounded-2xl bg-slate-50 px-4 py-3"><p class="text-xs text-slate-600">{{ kind === "council" ? "ส่งใบสมัครแล้ว ยังไม่ส่งหลักฐาน" : "ผ่านคุณสมบัติแล้ว ยังไม่ชำระ" }}</p><p class="text-2xl font-bold text-slate-700">{{ count("unpaid") }} <span class="text-sm font-medium">คน · {{ baht(unpaidTotal) }} บาท</span></p></div>
     </div>
 
     <div class="mt-4 flex flex-wrap gap-2 text-sm font-semibold">
@@ -162,7 +162,7 @@ function exportCsv() {
       <li v-for="u in shownUnpaid" :key="u.applicationId" class="flex flex-wrap items-center justify-between gap-3 py-3 text-sm">
         <div class="min-w-[16rem] flex-1">
           <p><b class="text-navy-800">{{ fullName(u) }}</b> <span class="text-xs text-slate-500">· {{ u.email }} · {{ u.phone }}</span></p>
-          <p class="text-xs text-slate-500">{{ cohortName(u.cohortId) }} · {{ pkgName(u.packageId) }} · {{ kind === "council" ? "ส่งใบสมัครเมื่อ" : "ผ่านการตรวจสอบเมื่อ" }} {{ fmt(u.approvedAt) }}</p>
+          <p class="text-xs text-slate-500">{{ cohortName(u.cohortId) }} · {{ pkgName(u.packageId) }} · {{ kind === "council" ? "ส่งใบสมัครเมื่อ" : "ผ่านคุณสมบัติเมื่อ" }} {{ fmt(u.approvedAt) }}</p>
         </div>
         <div class="flex flex-wrap items-center gap-2">
           <b class="text-navy-800">{{ baht(u.amount) }} บาท</b>
