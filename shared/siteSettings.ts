@@ -39,6 +39,7 @@ export interface SiteSettings {
   payRef1: string;
   payRef2: string;
   payTerminal: string;
+  vatRate: string;
   councilFee: string;
   councilPayInfo: string;
   councilPayinFile: string;
@@ -93,6 +94,7 @@ export const SITE_DEFAULTS: SiteSettings = {
   payRef1: "REF001",
   payRef2: "0",
   payTerminal: "IFB0948252545",
+  vatRate: "7",
   councilFee: "500",
   councilPayInfo: [
     "ชำระเข้าบัญชี \"สัตวแพทยสภา\" (ไม่คืนเงินทุกกรณี แม้ไม่ผ่านการตรวจคุณสมบัติ)",
@@ -116,7 +118,7 @@ export function mergeSettings(saved: Partial<Record<keyof SiteSettings, unknown>
     const v = saved?.[k as keyof SiteSettings];
     if (Array.isArray(def)) {
       if (Array.isArray(v)) out[k] = v; // แอดมินลบรายการจนหมดได้ (แต่ตัวเลือกฟอร์มต้องมีอย่างน้อย 1 — ตรวจตอนบันทึก)
-    } else if (typeof v === "string" && (v.trim() || k === "payPromptpayId" || k === "councilPayinFile")) out[k] = v.trim();
+    } else if (typeof v === "string" && (v.trim() || k === "payPromptpayId" || k === "vatRate" || k === "councilPayinFile")) out[k] = v.trim();
   }
   return out as unknown as SiteSettings;
 }

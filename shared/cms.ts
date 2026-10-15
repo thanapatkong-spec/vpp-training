@@ -164,6 +164,7 @@ CMS_COLLECTIONS.push({
     sectionF("บัญชีรับเงินค่าเรียน (QR)"),
     stringF("payName", "ชื่อบัญชีที่แสดง", false), stringF("payBank", "ธนาคาร/เลขบัญชีที่แสดง", false),
     stringF("payBillerId", "QR ชำระบิล: Biller ID (15 หลัก)", false, "จาก QR ที่ธนาคารออกให้ (ค่าเดิมคือของ Dr.John Pet SCB)"), stringF("payRef1", "QR ชำระบิล: Ref1", false), stringF("payRef2", "QR ชำระบิล: Ref2", false), stringF("payTerminal", "QR ชำระบิล: Terminal", false),
+    stringF("vatRate", "VAT (%) ที่บวกเพิ่มตอนโอนค่าเรียน", false, "ราคาในข้อมูลรุ่น = ราคาก่อน VAT · ยอดโอน/QR = ราคา + VAT · ใส่ 0 = ไม่คิด VAT"),
     stringF("payPromptpayId", "หรือใช้พร้อมเพย์ทั่วไป (เบอร์/เลขผู้เสียภาษี)", false, "ใส่ช่องนี้ = ใช้พร้อมเพย์แทน QR ชำระบิล · สแกนทดสอบทุกครั้งที่เปลี่ยน"),
     sectionF("ค่าตรวจสอบคุณสมบัติ (ชำระให้สัตวแพทยสภา)"),
     stringF("councilFee", "จำนวนเงิน (บาท)", false, "ตัวเลขอย่างเดียว เช่น 500"),

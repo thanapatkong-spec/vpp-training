@@ -47,4 +47,13 @@ DO $$ BEGIN
 	IF to_regclass('public.payments') IS NOT NULL THEN
 		ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "kind" text DEFAULT 'tuition' NOT NULL;
 	END IF;
+	-- ผลตรวจคุณสมบัติจากสัตวแพทยสภา: ตอนเพิ่มคอลัมน์ครั้งแรก ใบสมัครที่ผ่านอยู่แล้ว = ผ่านคุณสมบัติ (ชำระค่าเรียนต่อได้เหมือนเดิม)
+	IF to_regclass('public.applications') IS NOT NULL AND NOT EXISTS (
+		SELECT 1 FROM information_schema.columns WHERE table_schema = 'public' AND table_name = 'applications' AND column_name = 'council_check'
+	) THEN
+		ALTER TABLE "applications" ADD COLUMN "council_check" text;
+		ALTER TABLE "applications" ADD COLUMN IF NOT EXISTS "council_note" text;
+		ALTER TABLE "applications" ADD COLUMN IF NOT EXISTS "council_checked_at" timestamp with time zone;
+		UPDATE "applications" SET "council_check" = 'passed', "council_checked_at" = now() WHERE "status" = 'approved';
+	END IF;
 END $$;

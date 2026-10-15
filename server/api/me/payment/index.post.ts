@@ -13,7 +13,7 @@ export default defineEventHandler(async (event) => {
   const kind = parts.find((p) => p.name === "kind")?.data.toString("utf8") === "council" ? "council" : "tuition";
   const [app] = await db.select().from(applications).where(and(eq(applications.userId, u.id), cohort ? eq(applications.cohortId, cohort) : undefined)).orderBy(desc(applications.createdAt)).limit(1);
   if (kind === "council") return council(app, parts, u.email);
-  if (!app || app.status !== "approved") throw createError({ statusCode: 409, message: "ชำระเงินได้หลังใบสมัครผ่านการตรวจสอบ" });
+  if (!app || app.status !== "approved" || app.councilCheck !== "passed") throw createError({ statusCode: 409, message: "ชำระค่าเรียนได้หลังผ่านการตรวจคุณสมบัติจากสัตวแพทยสภา" });
   const prev = await db.select({ status: payments.status }).from(payments).where(and(eq(payments.applicationId, app.id), eq(payments.kind, "tuition")));
   if (prev.some((p) => p.status === "paid")) throw createError({ statusCode: 409, message: "ชำระค่าเรียนเรียบร้อยแล้ว" });
   if (prev.some((p) => p.status === "pending")) throw createError({ statusCode: 409, message: "ส่งสลิปแล้ว กรุณารอทีมงานตรวจสอบ" });
@@ -25,7 +25,7 @@ export default defineEventHandler(async (event) => {
   const type = d[0] === 0xff && d[1] === 0xd8 ? "image/jpeg" : d.subarray(0, 8).toString("hex") === "89504e470d0a1a0a" ? "image/png" : "";
   if (!type) throw createError({ statusCode: 422, message: "สลิปต้องเป็นรูป JPG หรือ PNG (บันทึกภาพสลิปจากแอปธนาคาร)" });
 
-  const amount = await priceOf(event, app.cohortId, app.packageId);
+  const amount = (await tuitionDue(event, app.cohortId, app.packageId)).total;
   const r = await verifySlip(d, type, amount);
   const base = { applicationId: app.id, amount, slipName: slip.filename || "slip", slipType: type, slipData: d };
 

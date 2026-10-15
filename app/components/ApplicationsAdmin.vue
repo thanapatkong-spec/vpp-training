@@ -1,11 +1,11 @@
 <script setup lang="ts">
-import { APP_DOCS, APP_STATUS } from "#shared/application";
+import { APP_DOCS, APP_STATUS, COUNCIL_CHECK } from "#shared/application";
 import { PACKAGES } from "#shared/config";
 
 const props = defineProps<{ authHeaders: () => Record<string, string> | undefined }>();
 const openFile = useAuthedOpen(props.authHeaders);
 
-type Row = { payStatus: string | null; councilStatus: string | null; id: string; cohortId: string; packageId: string; prefix: string; firstName: string; lastName: string; nationalId: string; phone: string; workplace: string; status: string; createdAt: string; updatedAt: string; email: string };
+type Row = { payStatus: string | null; councilStatus: string | null; councilCheck: string | null; id: string; cohortId: string; packageId: string; prefix: string; firstName: string; lastName: string; nationalId: string; phone: string; workplace: string; status: string; createdAt: string; updatedAt: string; email: string };
 type FileMeta = { id: string; kind: string; name: string; contentType: string; size: number; status: string; note: string | null };
 type Detail = Record<string, any> & { files: FileMeta[] };
 
@@ -55,6 +55,25 @@ async function decide(status: "approved" | "needs_changes" | "rejected") {
     openId.value = "";
   } catch (e: any) {
     msg.value = { ok: false, text: e?.data?.message || "บันทึกไม่สำเร็จ" };
+  } finally {
+    busy.value = false;
+  }
+}
+async function councilCheck(result: "passed" | "failed" | "pending") {
+  const msgs = { passed: "ยืนยันว่าผ่านการตรวจคุณสมบัติจากสัตวแพทยสภา?\nระบบจะเปิดให้ชำระค่าเรียน และส่งอีเมลแจ้งผู้สมัครให้ชำระภายใน 7 วัน", failed: "เหตุผล/รายละเอียดที่ไม่ผ่านคุณสมบัติ (ส่งให้ผู้สมัครทางอีเมล)", pending: "ยกเลิกผลตรวจคุณสมบัติ กลับเป็นรอผล? (ไม่ส่งอีเมล)" };
+  let note: string | undefined;
+  if (result === "failed") {
+    const r = prompt(msgs.failed);
+    if (r === null) return;
+    note = r || undefined;
+  } else if (!confirm(msgs[result])) return;
+  busy.value = true;
+  try {
+    await $fetch(`/api/manage/applications/${detail.value!.id}/council`, { method: "POST", body: { result, note }, headers: props.authHeaders() });
+    detail.value = await $fetch<Detail>(`/api/manage/applications/${detail.value!.id}`, { headers: props.authHeaders() });
+    await load();
+  } catch (e: any) {
+    alert(e?.data?.message || "ไม่สำเร็จ");
   } finally {
     busy.value = false;
   }
@@ -116,7 +135,8 @@ onMounted(load);
             <span v-else-if="r.councilStatus === 'pending'" class="rounded-full bg-amber-100 px-3 py-0.5 text-xs font-semibold text-amber-800">ค่าตรวจฯ รอตรวจ</span>
             <span v-if="r.payStatus === 'paid'" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ค่าเรียน ชำระแล้ว</span>
             <span v-else-if="r.payStatus === 'pending'" class="rounded-full bg-amber-500 px-3 py-0.5 text-xs font-semibold text-white">ค่าเรียน สลิปรอตรวจ</span>
-            <span class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="APP_STATUS[r.status]?.[1]">{{ APP_STATUS[r.status]?.[0] }}</span>
+            <span v-if="r.status === 'approved'" class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="COUNCIL_CHECK[r.councilCheck || 'pending']![1]">{{ COUNCIL_CHECK[r.councilCheck || "pending"]![0] }}</span>
+            <span class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="APP_STATUS[r.status]?.[1]">{{ r.status === "approved" ? "เอกสารผ่าน" : APP_STATUS[r.status]?.[0] }}</span>
           </span>
         </button>
         <div v-if="openId === r.id" class="mb-4 rounded-2xl bg-sky-soft p-4 text-sm">
@@ -156,8 +176,21 @@ onMounted(load);
                 </template>
               </li>
             </ul>
+            <div v-if="detail.status === 'approved'" class="mt-4 rounded-xl border border-sky-card bg-white p-3">
+              <p class="font-semibold text-navy-800">ผลตรวจคุณสมบัติจากสัตวแพทยสภา
+                <span class="ml-2 rounded-full px-2 py-0.5 text-xs" :class="COUNCIL_CHECK[detail.councilCheck || 'pending']![1]">{{ COUNCIL_CHECK[detail.councilCheck || "pending"]![0] }}</span>
+              </p>
+              <p v-if="detail.councilNote" class="mt-1 text-xs text-slate-600">หมายเหตุ: {{ detail.councilNote }}</p>
+              <p v-if="detail.councilPayments && !detail.councilPayments.some((p: any) => p.status === 'paid')" class="mt-1 text-xs text-amber-700">ยังไม่มีหลักฐานชำระค่าตรวจสอบคุณสมบัติที่ยืนยันแล้ว</p>
+              <div class="mt-2 flex flex-wrap gap-2 text-xs">
+                <button v-if="detail.councilCheck !== 'passed'" :disabled="busy" class="rounded-full bg-green-600 px-3 py-1.5 font-semibold text-white disabled:opacity-60" @click="councilCheck('passed')">ผ่านคุณสมบัติ (เปิดให้ชำระค่าเรียน)</button>
+                <button v-if="detail.councilCheck !== 'failed'" :disabled="busy" class="rounded-full border border-red-300 px-3 py-1.5 text-red-700 disabled:opacity-60" @click="councilCheck('failed')">ไม่ผ่านคุณสมบัติ</button>
+                <button v-if="detail.councilCheck" :disabled="busy" class="rounded-full border border-slate-300 px-3 py-1.5 text-slate-600 disabled:opacity-60" @click="councilCheck('pending')">ยกเลิกผล (กลับเป็นรอผล)</button>
+              </div>
+            </div>
             <template v-if="detail.status === 'approved'">
-              <p class="mt-4 font-semibold text-navy-800">การชำระค่าเรียน ({{ detail.amount?.toLocaleString("th-TH") }} บาท)</p>
+              <p class="mt-4 font-semibold text-navy-800">การชำระค่าเรียน ({{ detail.amount?.toLocaleString("th-TH") }} บาท รวม VAT)</p>
+              <p v-if="detail.councilCheck !== 'passed' && !detail.payments?.length" class="mt-1 text-xs text-slate-500">เปิดให้ผู้สมัครชำระหลังกด "ผ่านคุณสมบัติ"</p>
               <p v-if="!detail.payments?.length" class="mt-1 text-xs text-slate-500">ยังไม่มีการชำระ</p>
               <ul class="mt-2 space-y-2">
                 <li v-for="py in detail.payments" :key="py.id" class="flex flex-wrap items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs">

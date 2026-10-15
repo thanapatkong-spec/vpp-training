@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { CheckCircle2, Mail } from "lucide-vue-next";
-import { APP_DOCS, APP_STATUS, APPLY_PACKAGES, ApplicationInput, validThaiId, type AppDocKind } from "#shared/application";
+import { APP_DOCS, APP_STATUS, COUNCIL_CHECK, APPLY_PACKAGES, ApplicationInput, validThaiId, type AppDocKind } from "#shared/application";
 import { textsOf } from "#shared/siteSettings";
 import { baht } from "#shared/config";
 import { cohortPackages } from "#shared/cohorts";
@@ -16,7 +16,7 @@ const [cohorts, site] = await Promise.all([useCohorts(), useSiteSettings()]);
 const PREFIXES = computed(() => textsOf(site.value.formPrefixes));
 const EDUCATION = computed(() => textsOf(site.value.formEducation));
 // ใบสมัครแยกตามรุ่น: /apply?cohort=<รหัส> = ใบของรุ่นนั้น · /apply = รายการใบสมัครของฉัน (หรือฟอร์มถ้ายังไม่เคยสมัคร)
-type MyApp = { id: string; cohortId: string; packageId: string; status: string; updatedAt: string; paid: boolean; council: "paid" | "pending" | null };
+type MyApp = { id: string; cohortId: string; packageId: string; status: string; councilCheck: string | null; updatedAt: string; paid: boolean; council: "paid" | "pending" | null };
 const myApps = ref<MyApp[]>([]);
 const openCohorts = computed(() => cohorts.value.filter((c) => c.status === "open"));
 // รุ่นที่ยังสมัครได้ = เปิดรับ และยังไม่มีใบสมัครที่ใช้งานอยู่ (ไม่ผ่าน = สมัครใหม่ได้)
@@ -24,7 +24,7 @@ const canApply = (id: string) => !myApps.value.some((a) => a.cohortId === id && 
 const firstCohort = () => openCohorts.value.find((c) => c.id === route.query.cohort)?.id || openCohorts.value.find((c) => canApply(c.id))?.id || "";
 
 type Pay = { id: string; amount: number; status: string; note: string | null; transRef: string | null; createdAt: string; paidAt: string | null };
-type Existing = { id: string; status: string; adminNote: string | null; files: { id: string; kind: string; name: string; status: string; note: string | null }[]; payment?: { amount: number; paid: boolean; pending: boolean; history: Pay[]; promptpay: { payload: string; name: string } | null; autoCheck: boolean }; council?: Council } & Record<string, any>;
+type Existing = { id: string; status: string; adminNote: string | null; files: { id: string; kind: string; name: string; status: string; note: string | null }[]; payment?: { amount: number; base: number; vat: number; vatRate: number; open: boolean; paid: boolean; pending: boolean; history: Pay[]; promptpay: { payload: string; name: string } | null; autoCheck: boolean }; council?: Council } & Record<string, any>;
 const existing = ref<Existing | null>(null);
 const cohortCtx = computed(() => String(route.query.cohort || ""));
 const appUrl = (cohort: string) => `/api/me/application?cohort=${encodeURIComponent(cohort)}`;
@@ -186,6 +186,7 @@ const headCohort = computed(() => {
 });
 const packages = computed(() => cohortPackages(selCohort.value, site.value));
 const pkg = computed(() => packages.value.find((p) => p.id === f.packageId));
+const vatRate = computed(() => { const n = Number.parseFloat(site.value.vatRate); return Number.isFinite(n) && n >= 0 ? n : 7; });
 const applyPackages = computed(() => APPLY_PACKAGES.map((id) => packages.value.find((p) => p.id === id)!));
 
 // ---- ชำระค่าเรียน (พร้อมเพย์ + สลิป) ----
@@ -254,6 +255,7 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
               <span class="text-xs text-slate-500"> · {{ pkgShort(a.packageId) }} · {{ fmt(a.updatedAt) }}</span>
             </span>
             <span class="flex items-center gap-2">
+              <span v-if="a.status === 'approved' && !a.paid" class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="COUNCIL_CHECK[a.councilCheck || 'pending']![1]">{{ COUNCIL_CHECK[a.councilCheck || "pending"]![0] }}</span>
               <span v-if="a.paid" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ค่าเรียน: ชำระแล้ว</span>
               <span v-if="a.status !== 'rejected'" class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="a.council === 'paid' ? 'bg-green-100 text-green-800' : a.council === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'">ค่าตรวจคุณสมบัติ: {{ a.council === "paid" ? "ชำระแล้ว" : a.council === "pending" ? "รอตรวจ" : "ยังไม่ชำระ" }}</span>
               <span class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="APP_STATUS[a.status]?.[1]">{{ APP_STATUS[a.status]?.[0] }}</span>
@@ -272,12 +274,26 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
       <p v-if="done" class="mb-4 flex items-center gap-2 rounded-2xl bg-green-50 px-4 py-3 text-sm text-green-800"><CheckCircle2 class="size-5" />ส่งใบสมัครเรียบร้อยแล้ว ทีมงานจะตรวจสอบและแจ้งผล</p>
       <div class="flex flex-wrap items-center justify-between gap-2">
         <h2 class="text-xl font-bold text-navy-800">สถานะใบสมัคร</h2>
-        <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="APP_STATUS[existing.status]?.[1]">{{ APP_STATUS[existing.status]?.[0] }}</span>
+        <span class="flex flex-wrap gap-1">
+          <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="APP_STATUS[existing.status]?.[1]">{{ existing.status === "approved" ? "เอกสารผ่านการตรวจสอบ" : APP_STATUS[existing.status]?.[0] }}</span>
+          <span v-if="existing.status === 'approved'" class="rounded-full px-3 py-1 text-xs font-semibold" :class="COUNCIL_CHECK[existing.councilCheck || 'pending']![1]">{{ COUNCIL_CHECK[existing.councilCheck || "pending"]![0] }}</span>
+        </span>
       </div>
       <p class="mt-2 text-sm text-slate-600"><b class="text-navy-800">{{ cohortName(existing.cohortId) }}</b> · {{ existing.prefix }}{{ existing.firstName }} {{ existing.lastName }} · ส่งเมื่อ {{ fmt(existing.updatedAt) }}</p>
       <p v-if="existing.adminNote" class="mt-2 rounded-2xl bg-sky-soft px-4 py-2 text-sm text-slate-700">หมายเหตุจากทีมงาน: {{ existing.adminNote }}</p>
       <!-- ชำระค่าเรียน -->
-      <div v-if="existing.status === 'approved' && existing.payment" class="mt-5 rounded-2xl border-2 p-5" :class="existing.payment.paid ? 'border-green-300 bg-green-50' : 'border-brand bg-orange-50/40'">
+      <div v-if="existing.status === 'approved' && existing.payment && !existing.payment.open && !existing.payment.paid" class="mt-5 rounded-2xl border-2 p-5" :class="existing.councilCheck === 'failed' ? 'border-red-200 bg-red-50' : 'border-sky-card bg-sky-soft'">
+        <template v-if="existing.councilCheck === 'failed'">
+          <p class="font-bold text-red-700">ไม่ผ่านการตรวจคุณสมบัติจากสัตวแพทยสภา</p>
+          <p v-if="existing.councilNote" class="mt-1 text-sm text-slate-700">{{ existing.councilNote }}</p>
+          <p class="mt-1 text-sm text-slate-600">มีข้อสงสัย ติดต่อทีมงานทางอีเมลหรือ LINE @dr.john</p>
+        </template>
+        <template v-else>
+          <p class="font-bold text-navy-800">รอผลตรวจคุณสมบัติจากสัตวแพทยสภา</p>
+          <p class="mt-1 text-sm text-slate-600">ทีมงานส่งตรวจคุณสมบัติแล้ว เมื่อผ่าน ระบบจะเปิดให้ชำระค่าเรียน {{ baht(existing.payment.amount) }} บาท (รวม VAT) ในหน้านี้ และแจ้งทางอีเมล</p>
+        </template>
+      </div>
+      <div v-if="existing.status === 'approved' && existing.payment && (existing.payment.open || existing.payment.paid)" class="mt-5 rounded-2xl border-2 p-5" :class="existing.payment.paid ? 'border-green-300 bg-green-50' : 'border-brand bg-orange-50/40'">
         <template v-if="existing.payment.paid">
           <p class="flex items-center gap-2 font-bold text-green-800"><CheckCircle2 class="size-5" />ชำระค่าเรียนแล้ว</p>
           <p class="mt-1 text-sm text-slate-700">{{ baht(existing.payment.amount) }} บาท · เลขอ้างอิง {{ existing.payment.history.find((p) => p.status === "paid")?.transRef || "-" }} · ที่นั่งของคุณได้รับการยืนยันแล้ว</p>
@@ -287,7 +303,8 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
           <p class="mt-1 text-sm text-slate-600">ทีมงานจะยืนยันการชำระทางอีเมล</p>
         </template>
         <template v-else>
-          <p class="font-bold text-navy-800">ชำระค่าเรียน {{ baht(existing.payment.amount) }} บาท</p>
+          <p class="font-bold text-navy-800">ชำระค่าเรียน {{ baht(existing.payment.amount) }} บาท <span class="text-sm font-normal text-slate-600">(รวม VAT)</span></p>
+          <p v-if="existing.payment.vat" class="text-xs text-slate-500">ค่าเรียน {{ baht(existing.payment.base) }} + VAT {{ existing.payment.vatRate }}% {{ baht(existing.payment.vat) }} บาท · ขอใบเสร็จ/ใบกำกับภาษีได้ ระบุข้อมูลในใบสมัครหรือแจ้งทางอีเมล · กรุณาชำระภายใน 7 วัน</p>
           <div v-if="existing.payment.promptpay" class="mt-3 flex flex-wrap items-start gap-5">
             <div class="rounded-2xl bg-white p-3 text-center shadow-sm">
               <img v-if="qrSrc" :src="qrSrc" alt="QR พร้อมเพย์" class="size-48" />
@@ -296,7 +313,7 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
             <div class="min-w-[14rem] flex-1 text-sm text-slate-700">
               <p>ชื่อบัญชี: <b>{{ existing.payment.promptpay.name }}</b></p>
               <p v-if="existing.payment.promptpay.bank">บัญชี: <b>{{ existing.payment.promptpay.bank }}</b></p>
-              <p>ยอดชำระ: <b>{{ baht(existing.payment.amount) }} บาท</b> (ยอดอยู่ใน QR แล้ว)</p>
+              <p>ยอดชำระ: <b>{{ baht(existing.payment.amount) }} บาท</b> (รวม VAT · ยอดอยู่ใน QR แล้ว)</p>
               <p class="mt-3 text-xs text-slate-500">โอนแล้ว บันทึกภาพสลิปจากแอปธนาคาร แล้วแนบด้านล่าง{{ existing.payment.autoCheck ? " ระบบตรวจสลิปและยืนยันให้ทันที" : " ทีมงานจะตรวจและยืนยันทางอีเมล" }}</p>
               <FilePickButton v-model="slip" label="แนบสลิป" accept="image/jpeg,image/png" :max-mb="500" class="mt-2" />
               <button :disabled="paying" class="btn-brand mt-3 px-6 py-2.5 text-sm disabled:opacity-60" @click="sendSlip">{{ paying ? "กำลังตรวจสลิป..." : "ส่งสลิป" }}</button>
@@ -316,8 +333,8 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
         <p class="font-semibold text-navy-800">ขั้นตอนต่อไป</p>
         <ol class="mt-2 list-decimal space-y-1 pl-5">
           <li>ชำระ <b>ค่าตรวจสอบคุณสมบัติ</b> ให้สัตวแพทยสภา แล้วแนบหลักฐานในหน้านี้ (ทำได้ทันที แยกจากค่าเรียน)</li>
-          <li>ทีมงานตรวจสอบใบสมัครและเอกสาร และส่งตรวจคุณสมบัติกับสัตวแพทยสภา</li>
-          <li>เมื่อผ่านการตรวจสอบ ชำระ <b>ค่าเรียน</b> ให้ Dr.John ผ่าน QR ในหน้านี้ แล้วแนบสลิป (ภายใน 7 วัน)</li>
+          <li>ทีมงานตรวจสอบใบสมัครและเอกสาร แล้วส่งตรวจคุณสมบัติกับสัตวแพทยสภา</li>
+          <li>เมื่อผ่านการตรวจคุณสมบัติ ชำระ <b>ค่าเรียน</b> (รวม VAT) ให้ Dr.John ผ่าน QR ในหน้านี้ แล้วแนบสลิป ภายใน 7 วัน</li>
         </ol>
       </div>
     </section>
@@ -394,7 +411,7 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
             </div>
             <p class="mt-2 rounded-2xl bg-sky-soft px-4 py-2 text-xs text-navy-800"><b>ใบประกาศนียบัตรสำหรับนำไปขึ้นทะเบียนกับสัตวแพทยสภา ต้องเรียนและสอบผ่านทั้ง 2 ภาค</b> (ทฤษฎี + ปฏิบัติ) · ภาคปฏิบัติสมัครอย่างเดียวไม่ได้</p>
             <p v-if="f.packageId === 'theory'" class="mt-2 rounded-2xl bg-amber-50 px-4 py-2 text-xs text-amber-800">เลือกเฉพาะภาคทฤษฎี: ยังนำใบประกาศไปขึ้นทะเบียนไม่ได้จนกว่าจะเรียนภาคปฏิบัติครบ</p>
-            <p class="mt-1 text-xs text-slate-500">ราคานี้เป็นค่าเรียน (ชำระให้ Dr.John) ไม่รวมค่าตรวจสอบคุณสมบัติที่ชำระให้สัตวแพทยสภา</p>
+            <p class="mt-1 text-xs text-slate-500">ราคานี้เป็นค่าเรียน (ชำระให้ Dr.John) ยังไม่รวม VAT{{ vatRate ? ` ${vatRate}%` : "" }}{{ pkg && vatRate ? ` (ยอดโอน ${baht(Math.round(pkg.price * (100 + vatRate) / 100))} บาท)` : "" }} และไม่รวมค่าตรวจสอบคุณสมบัติที่ชำระให้สัตวแพทยสภา</p>
           </div>
           <div>
             <p class="text-xs text-slate-600">ผู้ชำระค่าเรียน</p>

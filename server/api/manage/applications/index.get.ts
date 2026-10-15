@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
     .select({
       id: applications.id, cohortId: applications.cohortId, packageId: applications.packageId, prefix: applications.prefix,
       firstName: applications.firstName, lastName: applications.lastName, nationalId: applications.nationalId, phone: applications.phone,
-      workplace: applications.workplace, status: applications.status, createdAt: applications.createdAt, updatedAt: applications.updatedAt, email: user.email,
+      workplace: applications.workplace, status: applications.status, councilCheck: applications.councilCheck, createdAt: applications.createdAt, updatedAt: applications.updatedAt, email: user.email,
       payStatus: sql<string | null>`(select case when bool_or(${payments.status} = 'paid') then 'paid' when bool_or(${payments.status} = 'pending') then 'pending' else null end from ${payments} where ${payments.applicationId} = ${applications.id} and ${payments.kind} = 'tuition')`,
       councilStatus: sql<string | null>`(select case when bool_or(${payments.status} = 'paid') then 'paid' when bool_or(${payments.status} = 'pending') then 'pending' else null end from ${payments} where ${payments.applicationId} = ${applications.id} and ${payments.kind} = 'council')`,
     })

@@ -19,7 +19,7 @@ export default defineEventHandler(async (event) => {
   if (!app) throw createError({ statusCode: 404, message: "ไม่พบใบสมัคร" });
   return {
     ...app.app, email: app.email, files,
-    payments: pays.filter((p) => p.kind !== "council"), amount: await priceOf(event, app.app.cohortId, app.app.packageId),
+    payments: pays.filter((p) => p.kind !== "council"), amount: (await tuitionDue(event, app.app.cohortId, app.app.packageId)).total,
     councilPayments: pays.filter((p) => p.kind === "council"), councilFee: await councilFee(),
   };
 });

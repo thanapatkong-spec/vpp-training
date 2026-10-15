@@ -176,6 +176,10 @@ export const applications = pgTable("applications", {
   invoiceTaxId: text("invoice_tax_id"),
   status: applicationStatus("status").notNull().default("submitted"),
   adminNote: text("admin_note"),
+  // ผลตรวจคุณสมบัติจากสัตวแพทยสภา (หลังเอกสารผ่าน): null = รอผล | passed = ผ่าน (เปิดให้ชำระค่าเรียน) | failed = ไม่ผ่าน
+  councilCheck: text("council_check"),
+  councilNote: text("council_note"),
+  councilCheckedAt: timestamp("council_checked_at", { withTimezone: true }),
   reviewedBy: text("reviewed_by"),
   reviewedAt: timestamp("reviewed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
