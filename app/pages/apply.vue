@@ -4,6 +4,7 @@ import { APP_DOCS, APP_STATUS, APPLY_PACKAGES, ApplicationInput, validThaiId, ty
 import { textsOf } from "#shared/siteSettings";
 import { baht } from "#shared/config";
 import { cohortPackages } from "#shared/cohorts";
+import type { Council } from "~/components/CouncilFeeCard.vue";
 
 useHead({ title: "สมัครเรียน VPP · VPP" });
 const auth = useAuthClient();
@@ -15,7 +16,7 @@ const [cohorts, site] = await Promise.all([useCohorts(), useSiteSettings()]);
 const PREFIXES = computed(() => textsOf(site.value.formPrefixes));
 const EDUCATION = computed(() => textsOf(site.value.formEducation));
 // ใบสมัครแยกตามรุ่น: /apply?cohort=<รหัส> = ใบของรุ่นนั้น · /apply = รายการใบสมัครของฉัน (หรือฟอร์มถ้ายังไม่เคยสมัคร)
-type MyApp = { id: string; cohortId: string; packageId: string; status: string; updatedAt: string; paid: boolean };
+type MyApp = { id: string; cohortId: string; packageId: string; status: string; updatedAt: string; paid: boolean; council: "paid" | "pending" | null };
 const myApps = ref<MyApp[]>([]);
 const openCohorts = computed(() => cohorts.value.filter((c) => c.status === "open"));
 // รุ่นที่ยังสมัครได้ = เปิดรับ และยังไม่มีใบสมัครที่ใช้งานอยู่ (ไม่ผ่าน = สมัครใหม่ได้)
@@ -23,7 +24,7 @@ const canApply = (id: string) => !myApps.value.some((a) => a.cohortId === id && 
 const firstCohort = () => openCohorts.value.find((c) => c.id === route.query.cohort)?.id || openCohorts.value.find((c) => canApply(c.id))?.id || "";
 
 type Pay = { id: string; amount: number; status: string; note: string | null; transRef: string | null; createdAt: string; paidAt: string | null };
-type Existing = { id: string; status: string; adminNote: string | null; files: { id: string; kind: string; name: string; status: string; note: string | null }[]; payment?: { amount: number; paid: boolean; pending: boolean; history: Pay[]; promptpay: { payload: string; name: string } | null; autoCheck: boolean } } & Record<string, any>;
+type Existing = { id: string; status: string; adminNote: string | null; files: { id: string; kind: string; name: string; status: string; note: string | null }[]; payment?: { amount: number; paid: boolean; pending: boolean; history: Pay[]; promptpay: { payload: string; name: string } | null; autoCheck: boolean }; council?: Council } & Record<string, any>;
 const existing = ref<Existing | null>(null);
 const cohortCtx = computed(() => String(route.query.cohort || ""));
 const appUrl = (cohort: string) => `/api/me/application?cohort=${encodeURIComponent(cohort)}`;
@@ -216,6 +217,11 @@ async function sendSlip() {
     paying.value = false;
   }
 }
+async function reloadExisting() {
+  if (!existing.value) return;
+  existing.value = await $fetch<Existing | null>(appUrl(existing.value.cohortId)).catch(() => existing.value);
+  myApps.value = await $fetch<MyApp[]>("/api/me/applications").catch(() => myApps.value);
+}
 const idHint = computed(() => (f.nationalId.replace(/\D/g, "").length === 13 && !validThaiId(f.nationalId.replace(/\D/g, "")) ? "เลขบัตรไม่ถูกต้อง ตรวจสอบอีกครั้ง" : ""));
 const cohortName = (id: string) => cohorts.value.find((c) => c.id === id)?.name || id;
 const pkgShort = (id: string) => cohortPackages(undefined, site.value).find((p) => p.id === id)?.short || id;
@@ -248,7 +254,8 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
               <span class="text-xs text-slate-500"> · {{ pkgShort(a.packageId) }} · {{ fmt(a.updatedAt) }}</span>
             </span>
             <span class="flex items-center gap-2">
-              <span v-if="a.paid" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ชำระแล้ว</span>
+              <span v-if="a.paid" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ค่าเรียน: ชำระแล้ว</span>
+              <span v-if="a.status !== 'rejected'" class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="a.council === 'paid' ? 'bg-green-100 text-green-800' : a.council === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-slate-100 text-slate-600'">ค่าตรวจคุณสมบัติ: {{ a.council === "paid" ? "ชำระแล้ว" : a.council === "pending" ? "รอตรวจ" : "ยังไม่ชำระ" }}</span>
               <span class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="APP_STATUS[a.status]?.[1]">{{ APP_STATUS[a.status]?.[0] }}</span>
               <span class="text-sm text-navy-800">ดู →</span>
             </span>
@@ -301,14 +308,16 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
         <p v-if="payMsg" class="mt-3 text-sm" :class="payMsg.ok ? 'text-green-700' : 'text-red-700'">{{ payMsg.text }}</p>
       </div>
 
+      <CouncilFeeCard v-if="existing.council && existing.status !== 'rejected'" :council="existing.council" :cohort-id="existing.cohortId" @sent="reloadExisting" />
+
       <p class="mt-4 flex items-center gap-2 text-xs text-slate-500"><Mail class="size-4" />ทีมงานจะแจ้งทุกขั้นตอนทางอีเมล {{ session?.user.email }} มีข้อสงสัยตอบกลับอีเมลได้เลย</p>
 
       <div class="mt-5 rounded-2xl border border-sky-card p-4 text-sm text-slate-700">
         <p class="font-semibold text-navy-800">ขั้นตอนต่อไป</p>
         <ol class="mt-2 list-decimal space-y-1 pl-5">
-          <li>ทีมงานตรวจสอบใบสมัครและเอกสาร</li>
-          <li>เมื่อผ่านการตรวจสอบ ชำระ <b>ค่าเรียน</b> ให้ Dr.John ผ่านพร้อมเพย์ในหน้านี้ แล้วแนบสลิป</li>
-          <li>ชำระ <b>ค่าตรวจสอบคุณสมบัติ</b> ให้สัตวแพทยสภา ตามช่องทางที่สัตวแพทยสภากำหนด</li>
+          <li>ชำระ <b>ค่าตรวจสอบคุณสมบัติ</b> ให้สัตวแพทยสภา แล้วแนบหลักฐานในหน้านี้ (ทำได้ทันที แยกจากค่าเรียน)</li>
+          <li>ทีมงานตรวจสอบใบสมัครและเอกสาร และส่งตรวจคุณสมบัติกับสัตวแพทยสภา</li>
+          <li>เมื่อผ่านการตรวจสอบ ชำระ <b>ค่าเรียน</b> ให้ Dr.John ผ่าน QR ในหน้านี้ แล้วแนบสลิป (ภายใน 7 วัน)</li>
         </ol>
       </div>
     </section>
@@ -322,6 +331,7 @@ const fmt = (d: string) => (d ? new Date(d).toLocaleDateString("th-TH", { year: 
     <!-- ฟอร์ม -->
     <template v-else-if="loaded && editable">
       <p v-if="existing?.status === 'needs_changes'" class="mt-6 rounded-2xl bg-orange-50 px-4 py-3 text-sm text-orange-800">ทีมงานขอให้แก้ไข: {{ existing.adminNote || "ดูเอกสารที่ถูกตีกลับในขั้นที่ 4" }}</p>
+      <CouncilFeeCard v-if="existing?.status === 'needs_changes' && existing.council" :council="existing.council" :cohort-id="existing.cohortId" @sent="reloadExisting" />
       <p v-else-if="existing?.status === 'rejected'" class="mt-6 rounded-2xl bg-red-50 px-4 py-3 text-sm text-red-700">ใบสมัครครั้งก่อนไม่ผ่าน{{ existing.adminNote ? `: ${existing.adminNote}` : "" }} สามารถสมัครใหม่ได้</p>
 
       <ol class="mt-6 flex flex-wrap gap-2 text-xs font-semibold">

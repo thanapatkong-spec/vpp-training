@@ -141,7 +141,7 @@ const sectionF = (label: string): CmsField => ({ name: `_${label}`, label, type:
 // ตั้งค่าเว็บไซต์: ข้อความที่เคยเขียนไว้ในโค้ด (เว้นว่าง = ใช้ค่าเดิม)
 CMS_COLLECTIONS.push({
   name: "settings", label: "ตั้งค่าเว็บไซต์", kind: "files", dir: "settings", ext: "yml",
-  files: [{ name: "site", label: "ตั้งค่าเว็บไซต์ (ข้อความหน้าแรก, แพ็กเกจ, ติดต่อ, บัญชีรับเงิน, ฟอร์มสมัคร)" }],
+  files: [{ name: "site", label: "ตั้งค่าเว็บไซต์ (ข้อความหน้าแรก, แพ็กเกจ, ติดต่อ, บัญชีรับเงิน, ค่าตรวจสอบคุณสมบัติ, ฟอร์มสมัคร)" }],
   titleField: "heroTitle",
   fields: [
     sectionF("ส่วนหัวหน้าแรก"),
@@ -165,6 +165,10 @@ CMS_COLLECTIONS.push({
     stringF("payName", "ชื่อบัญชีที่แสดง", false), stringF("payBank", "ธนาคาร/เลขบัญชีที่แสดง", false),
     stringF("payBillerId", "QR ชำระบิล: Biller ID (15 หลัก)", false, "จาก QR ที่ธนาคารออกให้ (ค่าเดิมคือของ Dr.John Pet SCB)"), stringF("payRef1", "QR ชำระบิล: Ref1", false), stringF("payRef2", "QR ชำระบิล: Ref2", false), stringF("payTerminal", "QR ชำระบิล: Terminal", false),
     stringF("payPromptpayId", "หรือใช้พร้อมเพย์ทั่วไป (เบอร์/เลขผู้เสียภาษี)", false, "ใส่ช่องนี้ = ใช้พร้อมเพย์แทน QR ชำระบิล · สแกนทดสอบทุกครั้งที่เปลี่ยน"),
+    sectionF("ค่าตรวจสอบคุณสมบัติ (ชำระให้สัตวแพทยสภา)"),
+    stringF("councilFee", "จำนวนเงิน (บาท)", false, "ตัวเลขอย่างเดียว เช่น 500"),
+    textF("councilPayInfo", "วิธีชำระที่แสดงให้ผู้สมัคร"),
+    { name: "councilPayinFile", label: "ใบ Pay-in ของสัตวแพทยสภา (PDF ให้ผู้สมัครดาวน์โหลด)", type: "file", required: false },
     sectionF("ตัวเลือกในฟอร์มสมัคร"),
     listF("formPrefixes", "คำนำหน้าชื่อ", [lineF]), listF("formEducation", "วุฒิการศึกษา", [lineF]),
   ],

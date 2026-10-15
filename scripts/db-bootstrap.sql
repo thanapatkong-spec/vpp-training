@@ -41,3 +41,10 @@ CREATE TABLE IF NOT EXISTS "media" (
 	"data" "bytea" NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL
 );
+
+-- คอลัมน์ใหม่ในตารางเดิม (ถ้ามีตารางแล้ว)
+DO $$ BEGIN
+	IF to_regclass('public.payments') IS NOT NULL THEN
+		ALTER TABLE "payments" ADD COLUMN IF NOT EXISTS "kind" text DEFAULT 'tuition' NOT NULL;
+	END IF;
+END $$;

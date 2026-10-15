@@ -9,16 +9,20 @@ export default defineEventHandler(async (event) => {
   const cohort = String(getQuery(event).cohort || "");
   const [app] = await db.select().from(applications).where(and(eq(applications.userId, u.id), cohort ? eq(applications.cohortId, cohort) : undefined)).orderBy(desc(applications.createdAt)).limit(1);
   if (!app) return null;
-  const [files, pays, amount] = await Promise.all([
+  const [files, allPays, amount, site, fee] = await Promise.all([
     db.select({ id: applicationFiles.id, kind: applicationFiles.kind, name: applicationFiles.name, status: applicationFiles.status, note: applicationFiles.note })
       .from(applicationFiles)
       .where(eq(applicationFiles.applicationId, app.id)),
-    db.select({ id: payments.id, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, createdAt: payments.createdAt, paidAt: payments.paidAt })
+    db.select({ id: payments.id, kind: payments.kind, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, createdAt: payments.createdAt, paidAt: payments.paidAt })
       .from(payments)
       .where(eq(payments.applicationId, app.id))
       .orderBy(desc(payments.createdAt)),
     priceOf(event, app.cohortId, app.packageId),
+    getSiteSettings(),
+    councilFee(),
   ]);
+  const pays = allPays.filter((p) => p.kind !== "council");
+  const cPays = allPays.filter((p) => p.kind === "council");
   const qr = app.status === "approved" ? await paymentQr(amount) : null;
   return {
     ...app,
@@ -31,6 +35,15 @@ export default defineEventHandler(async (event) => {
       history: pays,
       promptpay: qr,
       autoCheck: slipCheckEnabled(),
+    },
+    // ค่าตรวจสอบคุณสมบัติ (ให้สัตวแพทยสภา) — แยกจากค่าเรียน ส่งหลักฐานได้ทุกเมื่อหลังส่งใบสมัคร
+    council: {
+      amount: cPays.find((p) => p.status === "paid")?.amount ?? fee,
+      paid: cPays.some((p) => p.status === "paid"),
+      pending: cPays.some((p) => p.status === "pending"),
+      history: cPays,
+      info: site.councilPayInfo,
+      payin: site.councilPayinFile || null,
     },
   };
 });

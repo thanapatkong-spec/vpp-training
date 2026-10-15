@@ -16,6 +16,8 @@ export default defineEventHandler(async (event) => {
     for (const [k, label] of [["formPrefixes", "คำนำหน้าชื่อ"], ["formEducation", "วุฒิการศึกษา"]] as const) {
       if (Array.isArray(values[k]) && !textsOf(values[k] as { text: string }[]).length) throw createError({ statusCode: 422, message: `"${label}" ต้องมีอย่างน้อย 1 ตัวเลือก` });
     }
+    const fee = String(values.councilFee ?? "").trim();
+    if (fee && !/^\d{1,6}$/.test(fee)) throw createError({ statusCode: 422, message: "\"ค่าตรวจสอบคุณสมบัติ: จำนวนเงิน\" ต้องเป็นตัวเลขอย่างเดียว เช่น 500" });
   }
   await putItem(col.name, slug, values, body.sha);
   return { ok: true, slug };
