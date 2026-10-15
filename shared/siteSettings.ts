@@ -39,6 +39,9 @@ export interface SiteSettings {
   payRef1: string;
   payRef2: string;
   payTerminal: string;
+  councilFee: string;
+  councilPayInfo: string;
+  councilPayinFile: string;
   formPrefixes: { text: string }[];
   formEducation: { text: string }[];
 }
@@ -90,6 +93,18 @@ export const SITE_DEFAULTS: SiteSettings = {
   payRef1: "REF001",
   payRef2: "0",
   payTerminal: "IFB0948252545",
+  councilFee: "500",
+  councilPayInfo: [
+    "ชำระเข้าบัญชี \"สัตวแพทยสภา\" (ไม่คืนเงินทุกกรณี แม้ไม่ผ่านการตรวจคุณสมบัติ)",
+    "",
+    "ธนาคารกสิกรไทย (K PLUS): เมนู \"จ่ายบิล\" ค้นหารหัส 35096 สัตวแพทยสภา",
+    "ธนาคารไทยพาณิชย์ (SCB EASY): เมนู \"จ่ายบิล\" ค้นหารหัส 0932 สัตวแพทยสภา (Veterinary Council of Thailand)",
+    "",
+    "Ref 1 / รหัสสถาบัน: 20223/2567",
+    "Ref 2 / รหัสกิจกรรม: 5000134",
+    "จำนวน: 500 บาท",
+  ].join("\n"),
+  councilPayinFile: "",
   formPrefixes: items("นาย", "นาง", "นางสาว"),
   formEducation: items("มัธยมศึกษาปีที่ 6", "ปวช.", "ปวส.", "ปริญญาตรี", "สูงกว่าปริญญาตรี", "อื่นๆ (เทียบเท่า ม.6)"),
 };
@@ -101,7 +116,7 @@ export function mergeSettings(saved: Partial<Record<keyof SiteSettings, unknown>
     const v = saved?.[k as keyof SiteSettings];
     if (Array.isArray(def)) {
       if (Array.isArray(v)) out[k] = v; // แอดมินลบรายการจนหมดได้ (แต่ตัวเลือกฟอร์มต้องมีอย่างน้อย 1 — ตรวจตอนบันทึก)
-    } else if (typeof v === "string" && (v.trim() || k === "payPromptpayId")) out[k] = v.trim();
+    } else if (typeof v === "string" && (v.trim() || k === "payPromptpayId" || k === "councilPayinFile")) out[k] = v.trim();
   }
   return out as unknown as SiteSettings;
 }

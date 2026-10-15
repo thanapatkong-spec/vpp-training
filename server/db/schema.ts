@@ -200,6 +200,7 @@ export const applicationFiles = pgTable("application_files", {
 export const payments = pgTable("payments", {
   id: uuid("id").primaryKey().defaultRandom(),
   applicationId: uuid("application_id").notNull().references(() => applications.id, { onDelete: "cascade" }),
+  kind: text("kind").notNull().default("tuition"), // tuition = ค่าเรียน (ให้ Dr.John) | council = ค่าตรวจสอบคุณสมบัติ (ให้สัตวแพทยสภา)
   amount: integer("amount").notNull(),
   status: text("status").notNull().default("pending"), // pending (รอแอดมินตรวจ) | paid | rejected
   slipName: text("slip_name"),

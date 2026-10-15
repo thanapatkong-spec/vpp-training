@@ -13,9 +13,13 @@ export default defineEventHandler(async (event) => {
     .select({ id: applicationFiles.id, kind: applicationFiles.kind, name: applicationFiles.name, contentType: applicationFiles.contentType, size: applicationFiles.size, status: applicationFiles.status, note: applicationFiles.note })
     .from(applicationFiles)
     .where(eq(applicationFiles.applicationId, id)),
-    db.select({ id: payments.id, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, verifiedBy: payments.verifiedBy, createdAt: payments.createdAt, paidAt: payments.paidAt, hasSlip: payments.slipType })
+    db.select({ id: payments.id, kind: payments.kind, amount: payments.amount, status: payments.status, note: payments.note, transRef: payments.transRef, verifiedBy: payments.verifiedBy, createdAt: payments.createdAt, paidAt: payments.paidAt, hasSlip: payments.slipType })
     .from(payments).where(eq(payments.applicationId, id)).orderBy(desc(payments.createdAt)),
   ]);
   if (!app) throw createError({ statusCode: 404, message: "ไม่พบใบสมัคร" });
-  return { ...app.app, email: app.email, files, payments: pays, amount: await priceOf(event, app.app.cohortId, app.app.packageId) };
+  return {
+    ...app.app, email: app.email, files,
+    payments: pays.filter((p) => p.kind !== "council"), amount: await priceOf(event, app.app.cohortId, app.app.packageId),
+    councilPayments: pays.filter((p) => p.kind === "council"), councilFee: await councilFee(),
+  };
 });

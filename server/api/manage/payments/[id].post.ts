@@ -14,10 +14,14 @@ export default defineEventHandler(async (event) => {
     .innerJoin(applications, eq(applications.id, payments.applicationId)).innerJoin(user, eq(user.id, applications.userId))
     .where(eq(payments.id, getRouterParam(event, "id")!)).limit(1);
   if (!row) throw createError({ statusCode: 404, message: "ไม่พบรายการชำระ" });
+  const council = row.pay.kind === "council";
   if (p.data.action === "approve") {
     const ref = p.data.ref || row.pay.transRef || `ADMIN-${row.pay.id.slice(0, 8).toUpperCase()}`;
     await db.update(payments).set({ status: "paid", paidAt: new Date(), verifiedBy: admin.email, note: p.data.note || row.pay.note, transRef: row.pay.transRef || p.data.ref || null }).where(eq(payments.id, row.pay.id));
-    background(mailPaid(row.app, row.email, row.pay.amount, ref));
+    background(council ? mailCouncilReviewed(row.app, row.email, true, row.pay.amount, p.data.note) : mailPaid(row.app, row.email, row.pay.amount, ref));
+  } else if (council) {
+    await db.update(payments).set({ status: "rejected", verifiedBy: admin.email, note: p.data.note || "ทีมงานตรวจหลักฐานแล้วไม่ผ่าน" }).where(eq(payments.id, row.pay.id));
+    background(mailCouncilReviewed(row.app, row.email, false, row.pay.amount, p.data.note));
   } else {
     await db.update(payments).set({ status: "rejected", verifiedBy: admin.email, note: p.data.note || "ทีมงานตรวจสลิปแล้วไม่ผ่าน" }).where(eq(payments.id, row.pay.id));
     background(sendMail({ to: row.email, subject: "สลิปค่าเรียนไม่ผ่านการตรวจสอบ · VPP", html: `<p>สลิปที่ส่งมาไม่ผ่านการตรวจสอบ${p.data.note ? `: ${p.data.note.replace(/[<>&]/g, "")}` : ""}</p><p>กรุณาแนบสลิปใหม่ในหน้าใบสมัคร หรือตอบกลับอีเมลนี้</p>`, text: `สลิปที่ส่งมาไม่ผ่านการตรวจสอบ${p.data.note ? `: ${p.data.note}` : ""}\nกรุณาแนบสลิปใหม่ในหน้าใบสมัคร หรือตอบกลับอีเมลนี้` }));

@@ -5,7 +5,7 @@ import { PACKAGES } from "#shared/config";
 const props = defineProps<{ authHeaders: () => Record<string, string> | undefined }>();
 const openFile = useAuthedOpen(props.authHeaders);
 
-type Row = { payStatus: string | null; id: string; cohortId: string; packageId: string; prefix: string; firstName: string; lastName: string; nationalId: string; phone: string; workplace: string; status: string; createdAt: string; updatedAt: string; email: string };
+type Row = { payStatus: string | null; councilStatus: string | null; id: string; cohortId: string; packageId: string; prefix: string; firstName: string; lastName: string; nationalId: string; phone: string; workplace: string; status: string; createdAt: string; updatedAt: string; email: string };
 type FileMeta = { id: string; kind: string; name: string; contentType: string; size: number; status: string; note: string | null };
 type Detail = Record<string, any> & { files: FileMeta[] };
 
@@ -60,8 +60,12 @@ async function decide(status: "approved" | "needs_changes" | "rejected") {
   }
 }
 async function payAction(id: string, action: "approve" | "reject") {
-  const note = action === "reject" ? prompt("เหตุผลที่สลิปไม่ผ่าน (ส่งให้ผู้สมัครทางอีเมล)") ?? undefined : undefined;
-  if (action === "approve" && !confirm("ยืนยันว่าได้รับเงินแล้ว? ระบบจะส่งอีเมลยืนยันให้ผู้สมัคร")) return;
+  let note: string | undefined;
+  if (action === "reject") {
+    const r = prompt("เหตุผลที่ไม่ผ่าน (ส่งให้ผู้สมัครทางอีเมล)");
+    if (r === null) return;
+    note = r || undefined;
+  } else if (!confirm("ยืนยันว่าชำระแล้ว/หลักฐานถูกต้อง? ระบบจะส่งอีเมลยืนยันให้ผู้สมัคร")) return;
   try {
     await $fetch(`/api/manage/payments/${id}`, { method: "POST", body: { action, note }, headers: props.authHeaders() });
     detail.value = await $fetch<Detail>(`/api/manage/applications/${detail.value!.id}`, { headers: props.authHeaders() });
@@ -108,8 +112,10 @@ onMounted(load);
         <button class="flex w-full flex-wrap items-center justify-between gap-2 py-3 text-left" @click="toggle(r)">
           <span><b class="text-navy-800">{{ r.prefix }}{{ r.firstName }} {{ r.lastName }}</b> <span class="text-xs text-slate-500">· {{ r.workplace || "ไม่ระบุที่ทำงาน" }} · {{ cohortName(r.cohortId) }} · {{ pkgName(r.packageId) }} · {{ fmt(r.updatedAt) }}</span></span>
           <span class="flex gap-1">
-            <span v-if="r.payStatus === 'paid'" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ชำระแล้ว</span>
-            <span v-else-if="r.payStatus === 'pending'" class="rounded-full bg-amber-500 px-3 py-0.5 text-xs font-semibold text-white">สลิปรอตรวจ</span>
+            <span v-if="r.councilStatus === 'paid'" class="rounded-full bg-green-100 px-3 py-0.5 text-xs font-semibold text-green-800">ค่าตรวจฯ ชำระแล้ว</span>
+            <span v-else-if="r.councilStatus === 'pending'" class="rounded-full bg-amber-100 px-3 py-0.5 text-xs font-semibold text-amber-800">ค่าตรวจฯ รอตรวจ</span>
+            <span v-if="r.payStatus === 'paid'" class="rounded-full bg-green-600 px-3 py-0.5 text-xs font-semibold text-white">ค่าเรียน ชำระแล้ว</span>
+            <span v-else-if="r.payStatus === 'pending'" class="rounded-full bg-amber-500 px-3 py-0.5 text-xs font-semibold text-white">ค่าเรียน สลิปรอตรวจ</span>
             <span class="rounded-full px-3 py-0.5 text-xs font-semibold" :class="APP_STATUS[r.status]?.[1]">{{ APP_STATUS[r.status]?.[0] }}</span>
           </span>
         </button>
@@ -134,6 +140,20 @@ onMounted(load);
                   <option value="pending">ยังไม่ตรวจ</option><option value="ok">ถูกต้อง</option><option value="rejected">ไม่ผ่าน</option>
                 </select>
                 <input v-if="review.files[fl.id]!.status === 'rejected'" v-model="review.files[fl.id]!.note" class="field max-w-xs py-1 text-xs" placeholder="เหตุผล เช่น ภาพไม่ชัด" />
+              </li>
+            </ul>
+            <p class="mt-4 font-semibold text-navy-800">ค่าตรวจสอบคุณสมบัติ (สัตวแพทยสภา {{ detail.councilFee?.toLocaleString("th-TH") }} บาท)</p>
+            <p v-if="!detail.councilPayments?.length" class="mt-1 text-xs text-slate-500">ยังไม่ส่งหลักฐาน</p>
+            <ul class="mt-2 space-y-2">
+              <li v-for="py in detail.councilPayments" :key="py.id" class="flex flex-wrap items-center gap-2 rounded-xl bg-white px-3 py-2 text-xs">
+                <span class="rounded-full px-2 py-0.5 font-semibold" :class="py.status === 'paid' ? 'bg-green-100 text-green-800' : py.status === 'pending' ? 'bg-amber-100 text-amber-800' : 'bg-red-100 text-red-700'">{{ py.status === "paid" ? "ชำระแล้ว" : py.status === "pending" ? "รอตรวจ" : "ไม่ผ่าน" }}</span>
+                <span>{{ fmt(py.createdAt) }} · {{ py.verifiedBy || "" }}</span>
+                <span v-if="py.note" class="text-slate-500">{{ py.note }}</span>
+                <button v-if="py.hasSlip" class="underline" @click="openFile(`/api/payments/${py.id}/slip`)">ดูหลักฐาน</button>
+                <template v-if="py.status === 'pending'">
+                  <button class="rounded-full bg-green-600 px-3 py-1 text-white" @click="payAction(py.id, 'approve')">หลักฐานถูกต้อง</button>
+                  <button class="rounded-full border border-red-300 px-3 py-1 text-red-700" @click="payAction(py.id, 'reject')">ไม่ผ่าน</button>
+                </template>
               </li>
             </ul>
             <template v-if="detail.status === 'approved'">
