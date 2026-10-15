@@ -93,6 +93,7 @@ export const CMS_COLLECTIONS: CmsCollection[] = [
       dateF,
       stringF("cohort", "รุ่น (ใช้กรอง เช่น รุ่น พ.ย. 2569)", false),
       { name: "draft", label: "ฉบับร่าง (ยังไม่เผยแพร่)", type: "boolean", default: false },
+      { name: "regInfo", label: "แสดงกล่อง \"ข้อมูลสำหรับกรอกแบบคำขอขึ้นทะเบียน\" (หลักสูตร/หน่วยงานที่จัด)", type: "boolean", default: false },
       { name: "cover", label: "รูปปก (แนะนำ 1200x630)", type: "image", required: false },
       {
         name: "files", label: "ไฟล์ให้ดาวน์โหลด", type: "list", required: false,
@@ -170,6 +171,8 @@ CMS_COLLECTIONS.push({
     stringF("councilFee", "จำนวนเงิน (บาท)", false, "ตัวเลขอย่างเดียว เช่น 500"),
     textF("councilPayInfo", "วิธีชำระที่แสดงให้ผู้สมัคร"),
     { name: "councilPayinFile", label: "ใบ Pay-in ของสัตวแพทยสภา (PDF ให้ผู้สมัครดาวน์โหลด)", type: "file", required: false },
+    sectionF("ข้อมูลสำหรับกรอกแบบคำขอขึ้นทะเบียน (สัตวแพทยสภา)"),
+    stringF("regCourse", "ผ่านการอบรมหลักสูตร… เรื่อง", false), stringF("regOrganizer", "จัดโดยหน่วยงาน", false),
     sectionF("ตัวเลือกในฟอร์มสมัคร"),
     listF("formPrefixes", "คำนำหน้าชื่อ", [lineF]), listF("formEducation", "วุฒิการศึกษา", [lineF]),
   ],

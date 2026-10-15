@@ -103,6 +103,8 @@ const fmt = (d: string | null) => (d ? new Date(d).toLocaleDateString("th-TH", {
 
     <section class="mt-6 rounded-3xl bg-white p-6 shadow-sm">
       <h2 class="flex items-center gap-2 text-xl font-bold text-navy-800"><FileCheck2 class="text-brand" />ใบประกาศนียบัตรและไฟล์ของฉัน</h2>
+      <RegInfoBox class="mt-4" />
+      <p class="mt-2 text-xs text-slate-500">ขั้นตอนและเอกสารการขอขึ้นทะเบียน ดูได้ที่บทความ <NuxtLink to="/articles/vpp-registration" class="underline">การขอขึ้นทะเบียนผู้ช่วยผู้ประกอบวิชาชีพการสัตวแพทย์ชั้นหนึ่ง</NuxtLink></p>
       <ul v-if="certs.length" class="mt-4 space-y-2">
         <li v-for="c in certs" :key="c.id" class="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-sky-soft px-4 py-3">
           <div class="min-w-0">

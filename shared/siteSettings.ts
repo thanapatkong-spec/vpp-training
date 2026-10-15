@@ -43,6 +43,8 @@ export interface SiteSettings {
   councilFee: string;
   councilPayInfo: string;
   councilPayinFile: string;
+  regCourse: string;
+  regOrganizer: string;
   formPrefixes: { text: string }[];
   formEducation: { text: string }[];
 }
@@ -107,6 +109,8 @@ export const SITE_DEFAULTS: SiteSettings = {
     "จำนวน: 500 บาท",
   ].join("\n"),
   councilPayinFile: "",
+  regCourse: "หลักสูตรผู้ช่วยสัตวแพทย์ด้านการพยาบาลสัตว์",
+  regOrganizer: "โรงพยาบาลสัตว์คชาเว็ท",
   formPrefixes: items("นาย", "นาง", "นางสาว"),
   formEducation: items("มัธยมศึกษาปีที่ 6", "ปวช.", "ปวส.", "ปริญญาตรี", "สูงกว่าปริญญาตรี", "อื่นๆ (เทียบเท่า ม.6)"),
 };

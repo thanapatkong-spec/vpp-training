@@ -21,6 +21,7 @@ const date = new Date(page.value.date).toLocaleDateString("th-TH", { year: "nume
       </div>
       <h1 class="mt-3 text-3xl font-bold text-navy-800">{{ page.title }}</h1>
       <img v-if="page.cover" :src="asset(page.cover)" :alt="page.title" class="mt-5 w-full rounded-2xl" />
+      <RegInfoBox v-if="page.regInfo" class="mt-6" />
       <div class="prose-vpp mt-6" v-html="page.html" />
       <section v-if="page.files?.length" class="mt-10">
         <h2 class="flex items-center gap-2 text-xl font-bold text-navy-800"><FileText class="text-brand" />เอกสารดาวน์โหลด</h2>

@@ -183,6 +183,10 @@ const WHY = computed(() => site.value.why.map((w, i) => ({ icon: WHY_ICONS[i % W
             <p class="mt-1 text-sm text-slate-600">{{ site.legalText }}</p>
           </div>
         </div>
+        <div class="md:col-span-2">
+          <RegInfoBox compact />
+          <p class="mt-2 text-xs text-slate-500">ขั้นตอนและเอกสารการขอขึ้นทะเบียน: <NuxtLink to="/articles/vpp-registration" class="underline">อ่านบทความ</NuxtLink></p>
+        </div>
       </div>
     </section>
 

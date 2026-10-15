@@ -57,3 +57,11 @@ DO $$ BEGIN
 		UPDATE "applications" SET "council_check" = 'passed', "council_checked_at" = now() WHERE "status" = 'approved';
 	END IF;
 END $$;
+
+-- บทความการขอขึ้นทะเบียน: เปิดกล่องข้อมูลกรอกแบบคำขอ (ครั้งเดียว ถ้าแอดมินยังไม่เคยตั้งค่าช่องนี้)
+DO $$ BEGIN
+	IF to_regclass('public.content_items') IS NOT NULL THEN
+		UPDATE "content_items" SET "data" = "data" || '{"regInfo": true}'::jsonb
+		WHERE "collection" = 'articles' AND "slug" = 'vpp-registration' AND NOT ("data" ? 'regInfo');
+	END IF;
+END $$;
