@@ -65,3 +65,11 @@ DO $$ BEGIN
 		WHERE "collection" = 'articles' AND "slug" = 'vpp-registration' AND NOT ("data" ? 'regInfo');
 	END IF;
 END $$;
+
+-- ข้อความกล่อง "ถูกต้องตามกฎหมาย" (หน้าแรก): เปลี่ยนเฉพาะถ้ายังเป็นข้อความเดิม (แอดมินแก้เองแล้วไม่ทับ)
+DO $$ BEGIN
+	IF to_regclass('public.content_items') IS NOT NULL THEN
+		UPDATE "content_items" SET "data" = jsonb_set("data", '{legalText}', to_jsonb('ผู้ช่วยสัตวแพทย์ที่ผ่านการอบรมหลักสูตร VPP สามารถช่วยเหลือสัตวแพทย์ในการทำปฏิบัติงานรักษาสัตว์ ในสถานพยาบาลที่ขึ้นทะเบียนได้อย่างถูกต้อง มีหลักการ ภายใต้การดูแลของสัตวแพทย์ผู้ควบคุมอย่างใกล้ชิด'::text))
+		WHERE "collection" = 'settings' AND "slug" = 'site' AND "data"->>'legalText' = 'การอบรมไม่ได้ทำให้ผู้ช่วยสัตวแพทย์สามารถเป็นสัตวแพทย์ หรือทำหัตถการในขอบเขตวิชาชีพสัตวแพทย์ได้';
+	END IF;
+END $$;
