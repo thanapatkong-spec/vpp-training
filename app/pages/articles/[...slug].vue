@@ -6,6 +6,14 @@ const slug = ([] as string[]).concat(route.params.slug as string[] | string).joi
 const page = await useContentItem("articles", slug, "ไม่พบบทความ");
 useHead({ title: `${page.value.title} · VPP` });
 const asset = useAsset();
+const siteUrl = useRuntimeConfig().public.siteUrl.replace(/\/$/, "");
+const abs = (p: string) => (/^https?:/.test(p) ? p : siteUrl + asset(p));
+useSeoMeta({
+  ogType: "article",
+  ogTitle: page.value.title,
+  ogDescription: page.value.description || undefined,
+  ...(page.value.cover ? { ogImage: abs(page.value.cover), ogImageWidth: undefined, ogImageHeight: undefined, ogImageAlt: page.value.title } : {}),
+});
 const ext = (p: string) => (p.split(".").pop() ?? "").toUpperCase();
 const date = new Date(page.value.date).toLocaleDateString("th-TH", { year: "numeric", month: "long", day: "numeric" });
 </script>
