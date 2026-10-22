@@ -22,6 +22,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     databaseUrl: "", // NUXT_DATABASE_URL (หรือ DATABASE_URL ผ่าน drizzle-kit)
     public: {
+      siteUrl: "https://www.vetvpp.com", // NUXT_PUBLIC_SITE_URL — ใช้ทำลิงก์เต็มของรูปตอนแชร์ลิงก์ (Facebook/LINE)
       membersEnabled: false, // NUXT_PUBLIC_MEMBERS_ENABLED=true เมื่อ deploy แบบมีเซิร์ฟเวอร์ (Vercel) แล้วเท่านั้น
       googleLogin: false, // NUXT_PUBLIC_GOOGLE_LOGIN=true เมื่อตั้ง GOOGLE_CLIENT_ID/SECRET แล้ว
     },
