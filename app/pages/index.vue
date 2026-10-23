@@ -68,7 +68,7 @@ const WHY = computed(() => site.value.why.map((w, i) => ({ icon: WHY_ICONS[i % W
           <img :src="asset('/hero.jpg')" alt="ทีมสัตวแพทย์และผู้ช่วยสัตวแพทย์กำลังดูแลสุนัข" class="hero-photo relative aspect-[4/4.2] w-full object-cover" />
           <span class="float-badge -left-5 top-8"><PawPrint class="size-7 text-navy-700" /></span>
           <span class="float-badge -right-4 top-2"><ShieldPlus class="size-7 text-navy-700" /></span>
-          <span class="float-badge -right-6 top-1/3"><Syringe class="size-7 text-navy-700" /></span>
+          <span class="float-badge -right-3 top-1/3 md:-right-6"><Syringe class="size-7 text-navy-700" /></span>
           <span class="float-badge -right-3 top-[58%]"><HeartPulse class="size-7 text-navy-700" /></span>
           <div class="absolute -bottom-5 left-5 flex items-center gap-3 rounded-2xl bg-white px-4 py-3 shadow-lg">
             <Award class="size-7 text-brand" />
@@ -78,6 +78,15 @@ const WHY = computed(() => site.value.why.map((w, i) => ({ icon: WHY_ICONS[i % W
             </div>
           </div>
         </div>
+      </div>
+    </section>
+
+    <!-- Video -->
+    <section v-if="site.videoUrl" id="video" class="py-14">
+      <div class="mx-auto max-w-4xl px-5">
+        <h2 class="text-center text-3xl font-bold text-navy-800">{{ site.videoTitle }}</h2>
+        <p v-if="site.videoText" class="mx-auto mt-2 max-w-2xl text-center text-slate-600">{{ site.videoText }}</p>
+        <IntroVideo class="mt-8" :url="site.videoUrl" :title="site.videoTitle" />
       </div>
     </section>
 
@@ -215,19 +224,19 @@ const WHY = computed(() => site.value.why.map((w, i) => ({ icon: WHY_ICONS[i % W
 
     <!-- FAQ -->
     <section class="bg-sky-soft py-14">
-      <div class="mx-auto grid max-w-6xl gap-10 px-5 md:grid-cols-[2fr_1fr]">
-        <div>
+      <div class="mx-auto grid max-w-6xl grid-cols-1 gap-10 px-5 md:grid-cols-[2fr_1fr]">
+        <div class="min-w-0">
           <h2 class="text-2xl font-bold text-navy-800">คำถามที่ถามบ่อย</h2>
           <div class="mt-4 divide-y divide-sky-card border-y border-sky-card">
             <details v-for="f in faq" :key="f.slug" class="group py-3">
-              <summary class="flex cursor-pointer list-none items-center justify-between text-sm font-medium">
-                {{ f.question }}<ChevronDown class="size-4 text-slate-400 transition group-open:rotate-180" />
+              <summary class="flex cursor-pointer list-none items-center justify-between gap-3 text-sm font-medium">
+                {{ f.question }}<ChevronDown class="size-4 shrink-0 text-slate-400 transition group-open:rotate-180" />
               </summary>
               <p class="mt-2 whitespace-pre-line text-sm text-slate-600">{{ f.answer }}</p>
             </details>
           </div>
         </div>
-        <div>
+        <div class="min-w-0">
           <h2 class="flex items-center gap-2 text-2xl font-bold text-navy-800"><FileText class="text-brand" />เอกสารแนบ</h2>
           <ul v-if="docs?.length" class="mt-4 space-y-2">
             <li v-for="d in docs" :key="d.slug">

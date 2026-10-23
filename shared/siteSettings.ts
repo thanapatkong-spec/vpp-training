@@ -6,6 +6,9 @@ export interface SiteSettings {
   heroCta: string;
   heroBadgeTitle: string;
   heroBadgeText: string;
+  videoTitle: string;
+  videoText: string;
+  videoUrl: string;
   cohortsTitle: string;
   cohortsText: string;
   pricingTitle: string;
@@ -58,6 +61,9 @@ export const SITE_DEFAULTS: SiteSettings = {
   heroCta: "สมัครเรียน / สอบถาม",
   heroBadgeTitle: "ใบประกาศนียบัตร",
   heroBadgeText: "รับรองจากสัตวแพทยสภา",
+  videoTitle: "วิดีโอแนะนำการเรียน",
+  videoText: "ภาพรวมหลักสูตร ทั้งภาคทฤษฎีเรียนสดออนไลน์ และภาคปฏิบัติฝึกจริงในโรงพยาบาลสัตว์",
+  videoUrl: "/videos/vpp-intro.mp4",
   cohortsTitle: "รุ่นที่เปิดรับสมัคร",
   cohortsText: "เลือกรุ่นที่สะดวก แล้วสมัครผ่าน LINE หรืออีเมลได้ทันที",
   pricingTitle: "ค่าอบรมหลักสูตร",
@@ -122,7 +128,7 @@ export function mergeSettings(saved: Partial<Record<keyof SiteSettings, unknown>
     const v = saved?.[k as keyof SiteSettings];
     if (Array.isArray(def)) {
       if (Array.isArray(v)) out[k] = v; // แอดมินลบรายการจนหมดได้ (แต่ตัวเลือกฟอร์มต้องมีอย่างน้อย 1 — ตรวจตอนบันทึก)
-    } else if (typeof v === "string" && (v.trim() || k === "payPromptpayId" || k === "vatRate" || k === "councilPayinFile")) out[k] = v.trim();
+    } else if (typeof v === "string" && (v.trim() || k === "payPromptpayId" || k === "vatRate" || k === "videoUrl" || k === "councilPayinFile")) out[k] = v.trim();
   }
   return out as unknown as SiteSettings;
 }
